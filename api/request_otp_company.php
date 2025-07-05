@@ -102,12 +102,12 @@ try {
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'vjayakulan@gmail.com';  // Your Gmail address
-    $mail->Password = 'atvnribkexkvghbl';     // Your app password
+    $mail->Username = 'trashroute.wastemanagement@gmail.com';
+    $mail->Password = 'axlgbzwognxntkrl';
     $mail->SMTPSecure = 'tls';
     $mail->Port = 587;
 
-    $mail->setFrom('vjayakulan@gmail.com', 'TrashRoute OTP');
+    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
     $mail->addAddress($email, $name);
 
     $mail->isHTML(true);
