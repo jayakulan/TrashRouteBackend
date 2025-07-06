@@ -132,6 +132,20 @@ CREATE TABLE notifications (
   FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE SET NULL
 );
 
+CREATE TABLE contact_us (
+  contact_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,               -- Sender: customer or company (from registered_users)
+  admin_id INT,              -- Receiver: admin assigned (optional)
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  subject VARCHAR(150),
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES registered_users(user_id) ON DELETE SET NULL,
+  FOREIGN KEY (admin_id) REFERENCES admins(admin_id) ON DELETE SET NULL
+);
+
+
 -- Insert sample admin user
 INSERT INTO registered_users (name, email, password_hash, contact_number, address, role) VALUES
 ('Admin User', 'admin@gmail.com', 'admin', '1234567890', 'Admin Address', 'admin');
@@ -204,3 +218,40 @@ SELECT pr.request_id, pr.waste_type, pr.quantity, pr.status, ru.name as customer
 FROM pickup_requests pr 
 JOIN customers c ON pr.customer_id = c.customer_id 
 JOIN registered_users ru ON c.customer_id = ru.user_id; 
+
+
+CREATE TABLE IF NOT EXISTS admins (
+  admin_id INT PRIMARY KEY,
+  FOREIGN KEY (admin_id) REFERENCES registered_users(user_id) ON DELETE CASCADE
+);
+
+-- Check if admin users exist in registered_users
+-- If not, create default admin user
+INSERT INTO registered_users (name, email, password_hash, contact_number, address, role) 
+SELECT 'Admin User', 'admin@gmail.com', 'admin', '1234567890', 'Admin Address', 'admin'
+WHERE NOT EXISTS (SELECT 1 FROM registered_users WHERE email = 'admin@gmail.com');
+
+-- Insert admin record for the default admin
+INSERT INTO admins (admin_id) 
+SELECT user_id FROM registered_users 
+WHERE email = 'admin@gmail.com' AND role = 'admin'
+AND NOT EXISTS (SELECT 1 FROM admins WHERE admin_id = registered_users.user_id);
+
+-- Create additional admin if needed
+INSERT INTO registered_users (name, email, password_hash, contact_number, address, role) 
+SELECT 'Sarah Johnson', 'sarah.johnson@trashroute.com', 'adminSJ2024', '+94771234567', '123 Management Drive, Colombo 07, Sri Lanka', 'admin'
+WHERE NOT EXISTS (SELECT 1 FROM registered_users WHERE email = 'sarah.johnson@trashroute.com');
+
+-- Insert admin record for Sarah Johnson
+INSERT INTO admins (admin_id) 
+SELECT user_id FROM registered_users 
+WHERE email = 'sarah.johnson@trashroute.com' AND role = 'admin'
+AND NOT EXISTS (SELECT 1 FROM admins WHERE admin_id = registered_users.user_id);
+
+-- Show all admin users
+SELECT 'Admin Users:' as info;
+SELECT ru.user_id, ru.name, ru.email, ru.role, 
+       CASE WHEN a.admin_id IS NOT NULL THEN 'Yes' ELSE 'No' END as in_admins_table
+FROM registered_users ru 
+LEFT JOIN admins a ON ru.user_id = a.admin_id 
+WHERE ru.role = 'admin'; 
