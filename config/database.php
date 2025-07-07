@@ -24,4 +24,17 @@ class Database {
         return $this->conn;
     }
 }
+
+// Create a global PDO connection for backward compatibility
+try {
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
+        throw new Exception("Failed to establish database connection");
+    }
+} catch (Exception $e) {
+    error_log("Database connection error: " . $e->getMessage());
+    // Don't echo here to avoid HTML output in API responses
+}
 ?> 
