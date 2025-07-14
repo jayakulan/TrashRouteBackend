@@ -40,15 +40,18 @@ CREATE TABLE admins (
 -- Table: pickup_requests
 CREATE TABLE pickup_requests (
   request_id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_id INT NOT NULL,
-  waste_type VARCHAR(100) NOT NULL,
-  quantity INT NOT NULL,
+  customer_id INT,
+  waste_type VARCHAR(100),
+  quantity INT,
   latitude DECIMAL(10, 8),
   longitude DECIMAL(11, 8),
   status ENUM('Request received', 'Pending', 'Accepted', 'Completed') DEFAULT 'Request received',
+  otp VARCHAR(10),
+  otp_verified BOOLEAN DEFAULT FALSE,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
 );
+
 
 -- Table: routes
 CREATE TABLE routes (
@@ -99,6 +102,8 @@ CREATE TABLE company_feedback (
   feedback_id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
   company_id INT NOT NULL,
+  entered_otp VARCHAR(10), -- OTP entered by the company
+  pickup_verified BOOLEAN DEFAULT FALSE, -- Set to TRUE if OTP matches
   pickup_completed BOOLEAN DEFAULT FALSE,
   rating INT CHECK (rating BETWEEN 1 AND 5),
   comment TEXT,
@@ -106,6 +111,7 @@ CREATE TABLE company_feedback (
   FOREIGN KEY (request_id) REFERENCES pickup_requests(request_id) ON DELETE CASCADE,
   FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE
 );
+
 
 -- Table: otp
 CREATE TABLE otp (
