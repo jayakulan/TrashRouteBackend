@@ -21,10 +21,24 @@ try {
         exit;
     }
 
-    // Fetch unique customers and total quantity for this waste type
-    $query = "SELECT customer_id, quantity FROM pickup_requests WHERE waste_type = :waste_type";
+    // Only show pickup requests for this waste type that are NOT assigned to another company (not in an active route with status 'Accepted' or 'Completed')
+    $query = "
+        SELECT pr.customer_id, pr.quantity
+        FROM pickup_requests pr
+        WHERE pr.waste_type LIKE :waste_type
+        AND pr.status = 'Request received'
+        AND pr.request_id NOT IN (
+            SELECT rrm.request_id
+            FROM route_request_mapping rrm
+            INNER JOIN routes r ON rrm.route_id = r.route_id
+            WHERE r.is_accepted = 1 AND (
+                SELECT status FROM pickup_requests WHERE request_id = rrm.request_id
+            ) IN ('Accepted', 'Completed')
+        )
+    ";
     $stmt = $db->prepare($query);
-    $stmt->bindParam(':waste_type', $waste_type, PDO::PARAM_STR);
+    $likeWasteType = $waste_type . '%';
+    $stmt->bindParam(':waste_type', $likeWasteType, PDO::PARAM_STR);
     $stmt->execute();
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
