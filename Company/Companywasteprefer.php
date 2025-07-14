@@ -25,7 +25,7 @@ try {
     $query = "
         SELECT pr.customer_id, pr.quantity
         FROM pickup_requests pr
-        WHERE pr.waste_type LIKE :waste_type
+        WHERE pr.waste_type = :waste_type
         AND pr.status = 'Request received'
         AND pr.request_id NOT IN (
             SELECT rrm.request_id
@@ -37,8 +37,7 @@ try {
         )
     ";
     $stmt = $db->prepare($query);
-    $likeWasteType = $waste_type . '%';
-    $stmt->bindParam(':waste_type', $likeWasteType, PDO::PARAM_STR);
+    $stmt->bindParam(':waste_type', $waste_type, PDO::PARAM_STR);
     $stmt->execute();
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
