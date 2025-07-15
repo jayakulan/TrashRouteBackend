@@ -36,13 +36,13 @@ try {
         $route_id = $route['route_id'];
     }
 
-    // Get all pickup requests for this route
+    // Get all pickup requests for this route (using route_request_mapping)
     $query = "SELECT pr.request_id, pr.customer_id, pr.waste_type, pr.quantity, pr.status, ru.name as customer_name, ru.address, ru.contact_number
-              FROM pickup_requests pr
-              INNER JOIN routes r ON pr.request_id = r.request_id
+              FROM route_request_mapping rrm
+              INNER JOIN pickup_requests pr ON rrm.request_id = pr.request_id
               INNER JOIN customers c ON pr.customer_id = c.customer_id
               INNER JOIN registered_users ru ON c.customer_id = ru.user_id
-              WHERE r.route_id = :route_id";
+              WHERE rrm.route_id = :route_id";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':route_id', $route_id, PDO::PARAM_INT);
     $stmt->execute();
@@ -60,8 +60,10 @@ try {
             'id' => $row['customer_id'],
             'address' => $row['address'] ?? 'N/A',
             'contact' => $row['customer_name'] ?? 'N/A',
-            'notes' => $row['waste_type'] ?? '',
+            'notes' => "Waste Type: {$row['waste_type']}, Quantity: {$row['quantity']} kg",
             'collected' => $row['status'] === 'Completed',
+            'status' => $row['status'],
+            'contact_number' => $row['contact_number'],
         ];
         $totalQuantity += (int)$row['quantity'];
     }

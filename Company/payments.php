@@ -45,7 +45,7 @@ try {
     }
 
     // Fetch all pickup requests for the specific waste type
-    $queryPickup = "SELECT $requestIdColumn, customer_id, waste_type, quantity FROM pickup_requests WHERE waste_type = :waste_type AND status IN ('Request received', 'Pending', 'Accepted') ORDER BY $requestIdColumn ASC";
+    $queryPickup = "SELECT $requestIdColumn, customer_id, waste_type, quantity FROM pickup_requests WHERE waste_type = :waste_type AND status = 'Request received' ORDER BY $requestIdColumn ASC";
     $stmtPickup = $db->prepare($queryPickup);
     $stmtPickup->bindParam(':waste_type', $waste_type, PDO::PARAM_STR);
     $stmtPickup->execute();
