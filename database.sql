@@ -112,6 +112,14 @@ CREATE TABLE company_feedback (
   FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE
 );
 
+CREATE TABLE `route_request_mapping` (
+  `mapping_id` int(11) NOT NULL,
+  `route_id` int(11) NOT NULL,
+  `request_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 
 -- Table: otp
 CREATE TABLE otp (
