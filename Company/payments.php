@@ -58,7 +58,7 @@ try {
 
     $totalCustomers = count($pickupRequests);
     $totalQuantity = array_sum(array_column($pickupRequests, 'quantity'));
-    
+
     // Create a single route entry (routes table doesn't have request_id column)
     $routeDetails = "Route for {$waste_type} waste collection - Total Customers: {$totalCustomers}, Total Quantity: {$totalQuantity} kg";
     
@@ -132,7 +132,54 @@ try {
     
     if (!$stmtUpdate->execute($requestIds)) {
         echo json_encode(['success' => false, 'message' => 'Failed to update pickup request status']);
-        exit;
+    exit;
+    }
+
+    // Fetch company name from registered_users using company_id
+    $stmtCompany = $db->prepare("
+        SELECT name AS company_name
+        FROM registered_users
+        WHERE user_id = :company_id AND role = 'company'
+    ");
+    $stmtCompany->bindParam(':company_id', $company_id, PDO::PARAM_INT);
+    $stmtCompany->execute();
+    $companyRow = $stmtCompany->fetch(PDO::FETCH_ASSOC);
+    $company_name = $companyRow ? $companyRow['company_name'] : '';
+
+    // For each accepted pickup request, get customer email and send notification
+    foreach ($requestIds as $request_id) {
+        $stmtEmail = $db->prepare("
+            SELECT ru.email AS customer_email
+            FROM pickup_requests pr
+            INNER JOIN customers c ON pr.customer_id = c.customer_id
+            INNER JOIN registered_users ru ON c.customer_id = ru.user_id
+            WHERE pr.$requestIdColumn = :request_id
+        ");
+        $stmtEmail->bindParam(':request_id', $request_id, PDO::PARAM_INT);
+        $stmtEmail->execute();
+        $row = $stmtEmail->fetch(PDO::FETCH_ASSOC);
+        if ($row && $row['customer_email']) {
+            $customer_email = $row['customer_email'];
+
+            // --- Direct include method (default) ---
+            $_POST['customer_email'] = $customer_email;
+            $_POST['company_name'] = $company_name;
+            include __DIR__ . '/comemail.php';
+
+            // --- OR cURL HTTP POST method (uncomment to use) ---
+            /*
+            $postData = [
+                'customer_email' => $customer_email,
+                'company_name' => $company_name
+            ];
+            $ch = curl_init('http://localhost/Trashroutefinal/TrashRouteBackend/Company/comemail.php');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            $response = curl_exec($ch);
+            curl_close($ch);
+            */
+        }
     }
 
     echo json_encode([
@@ -149,5 +196,5 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     exit;
-}
+} 
 ?> 

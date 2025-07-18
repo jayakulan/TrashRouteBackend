@@ -1,4 +1,5 @@
 <?php
+ob_clean(); // Clear any accidental output buffer
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
@@ -58,6 +59,7 @@ try {
     foreach ($requests as $row) {
         $households[] = [
             'id' => $row['customer_id'],
+            'request_id' => $row['request_id'], // Add request_id for frontend use
             'address' => $row['address'] ?? 'N/A',
             'contact' => $row['customer_name'] ?? 'N/A',
             'notes' => "Waste Type: {$row['waste_type']}, Quantity: {$row['quantity']} kg",
