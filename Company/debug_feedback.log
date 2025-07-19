@@ -24,3 +24,25 @@ Array
     [comment] => good
     [entered_otp] => 145788
 )
+Array
+(
+    [request_id] => 15
+    [company_id] => 3
+    [pickup_completed] => 1
+    [rating] => 5
+    [comment] => 
+    [entered_otp] => 123456
+)
+=== New Feedback Submission ===
+Timestamp: 2025-07-19 08:45:38
+Input: Array
+(
+    [request_id] => 18
+    [company_id] => 11
+    [pickup_completed] => 1
+    [rating] => 5
+    [comment] => 
+    [entered_otp] => 123456
+)
+
+SUCCESS: Company ID 11 validated

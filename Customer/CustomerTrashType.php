@@ -73,15 +73,18 @@ try {
     $customerId = $currentUser['user_id'];
     error_log("Customer ID: " . $customerId);
     
-    // Test database connection
-    if (!isset($pdo) || !$pdo) {
+    // Get database connection
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    if (!$db) {
         throw new Exception('Database connection not available. Please check your database configuration.');
     }
     
     // Verify customer exists in customers table
-    $stmt = $pdo->prepare("SELECT customer_id FROM customers WHERE customer_id = ?");
+    $stmt = $db->prepare("SELECT customer_id FROM customers WHERE customer_id = ?");
     if (!$stmt) {
-        throw new Exception('Failed to prepare customer query: ' . print_r($pdo->errorInfo(), true));
+        throw new Exception('Failed to prepare customer query: ' . print_r($db->errorInfo(), true));
     }
     $stmt->execute([$customerId]);
     $customer = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -91,7 +94,7 @@ try {
     }
     
     // Begin transaction
-    $pdo->beginTransaction();
+    $db->beginTransaction();
     
     $insertedRequests = [];
     
@@ -104,7 +107,7 @@ try {
         // Only insert if waste type is selected and has quantity
         if ($selected && $quantity > 0) {
             // Insert into pickup_requests table (note: plural form)
-            $stmt = $pdo->prepare("
+            $stmt = $db->prepare("
                 INSERT INTO pickup_requests (customer_id, waste_type, quantity, status, timestamp) 
                 VALUES (?, ?, ?, ?, NOW())
             ");
@@ -120,7 +123,7 @@ try {
                 throw new Exception('Failed to insert pickup request for ' . $type);
             }
             
-            $requestId = $pdo->lastInsertId();
+            $requestId = $db->lastInsertId();
             
             $insertedRequests[] = [
                 'request_id' => $requestId,
@@ -131,7 +134,7 @@ try {
     }
     
     // Commit transaction
-    $pdo->commit();
+    $db->commit();
     
     // Return success response
     echo json_encode([
@@ -145,8 +148,8 @@ try {
     
 } catch (Exception $e) {
     // Rollback transaction on error
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
     }
     
     http_response_code(400);
@@ -156,8 +159,8 @@ try {
     ]);
 } catch (PDOException $e) {
     // Rollback transaction on database error
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
     }
     
     http_response_code(500);
