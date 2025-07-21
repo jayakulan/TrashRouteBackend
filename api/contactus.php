@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Customer.php';
+require_once __DIR__ . '/../classes/Company.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');

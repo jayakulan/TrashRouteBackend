@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ✅ Core login logic begins here
 require_once '../../config/database.php';
 require_once '../../utils/helpers.php';
+require_once '../../classes/Customer.php';
+require_once '../../classes/Company.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Helpers::sendError('Method not allowed', 405);
@@ -58,77 +60,32 @@ if (!$db) {
 }
 
 try {
-    // Check if user exists
-    $query = "SELECT user_id, name, email, password_hash, role, disable_status 
-              FROM registered_users WHERE email = :email";
+    // Fetch user by email to get role
+    $query = "SELECT role FROM registered_users WHERE email = :email";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':email', $email);
     $stmt->execute();
-    
-    $user = $stmt->fetch();
-    
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$user) {
         Helpers::sendError('Invalid email or password');
     }
-
-    // Check if account is disabled
-    if ($user['disable_status'] !== 'active') {
-        Helpers::sendError('Account is disabled');
+    $role = $user['role'];
+    if ($role === 'customer') {
+        $result = Customer::login($db, $email, $password);
+    } elseif ($role === 'company') {
+        $result = Company::login($db, $email, $password);
+    } else {
+        Helpers::sendError('Invalid role in database');
     }
-
-    // Validate password (support plain text + hashed for compatibility)
-    $password_valid = false;
-    if ($user['password_hash'] === $password) {
-        $password_valid = true;
-    } elseif (Helpers::verifyPassword($password, $user['password_hash'])) {
-        $password_valid = true;
-    }
-
-    if (!$password_valid) {
-        Helpers::sendError('Invalid email or password');
-    }
-
-    // Generate token
-    $token = Helpers::generateToken($user['user_id'], $user['role']);
-
-    // Fetch user profile based on role
-    $profile = null;
-    if ($user['role'] === 'customer') {
-        $query = "SELECT c.customer_id, ru.name, ru.email, ru.contact_number, ru.address 
-                  FROM customers c 
-                  JOIN registered_users ru ON c.customer_id = ru.user_id 
-                  WHERE ru.user_id = :user_id";
-    } elseif ($user['role'] === 'company') {
-        $query = "SELECT c.company_id, c.company_reg_number, ru.name, ru.email, ru.contact_number, ru.address 
-                  FROM companies c 
-                  JOIN registered_users ru ON c.company_id = ru.user_id 
-                  WHERE ru.user_id = :user_id";
-    } elseif ($user['role'] === 'admin') {
-        $query = "SELECT a.admin_id, ru.name, ru.email, ru.contact_number, ru.address 
-                  FROM admins a 
-                  JOIN registered_users ru ON a.admin_id = ru.user_id 
-                  WHERE ru.user_id = :user_id";
-    }
-
-    if ($query) {
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $user['user_id']);
-        $stmt->execute();
-        $profile = $stmt->fetch();
-    }
-
-    // Remove sensitive data
+    $user = $result['user'];
+    $profile = $result['profile'];
     unset($user['password_hash']);
-
-    // Final response
-    $response_data = [
+    $token = Helpers::generateToken($user['user_id'], $user['role']);
+    Helpers::sendResponse([
         'user' => $user,
         'profile' => $profile,
         'token' => $token
-    ];
-
-    Helpers::sendResponse($response_data, 200, 'Login successful');
-
+    ], 200, 'Login successful');
 } catch (Exception $e) {
-    Helpers::sendError('Login failed: ' . $e->getMessage(), 500);
+    Helpers::sendError('Login failed: ' . $e->getMessage(), 401);
 }

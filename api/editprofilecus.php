@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Customer.php';
+require_once __DIR__ . '/../classes/Company.php';
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
@@ -140,15 +143,11 @@ try {
         throw new Exception('Failed to update profile');
     }
     
-    // Get updated user data
-    $stmt = $pdo->prepare("SELECT id, name, email, phone, address, created_at FROM customers WHERE id = ?");
-    $stmt->execute([$userId]);
-    $updatedUser = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+    $customer = new Customer($userId, $email, $name, $address);
+    $updatedUser = $customer->updateProfile($pdo, $userId, $name, $email, $phone, $address, $currentPassword, $newPassword, $confirmPassword);
     // Update session data
     $_SESSION['user_name'] = $updatedUser['name'];
     $_SESSION['user_email'] = $updatedUser['email'];
-    
     // Return success response
     echo json_encode([
         'success' => true,

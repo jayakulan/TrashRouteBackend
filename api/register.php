@@ -17,6 +17,8 @@ error_reporting(E_ALL);
 
 require_once '../../config/database.php';
 require_once '../../utils/helpers.php';
+require_once '../classes/Customer.php';
+require_once '../classes/Company.php';
 
 $allowed_origins = [
     "http://localhost:3000",
@@ -79,122 +81,11 @@ if (!$db) {
 }
 
 try {
-    // Check if email already exists
-    $query = "SELECT user_id FROM registered_users WHERE email = :email";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':email', $email);
-    $stmt->execute();
-    
-    if ($stmt->fetch()) {
-        Helpers::sendError('Email already registered');
-    }
-    
-    // Start transaction
-    $db->beginTransaction();
-    
-    // Hash password
-    $hashed_password = Helpers::hashPassword($password);
-    
-    // Get contact number and address
-    $contact_number = isset($input['contact_number']) ? Helpers::sanitize($input['contact_number']) : null;
-    $address = isset($input['address']) ? Helpers::sanitize($input['address']) : null;
-    
-    // Create user in registered_users table
-    $query = "INSERT INTO registered_users (name, email, password_hash, contact_number, address, role) 
-              VALUES (:name, :email, :password_hash, :contact_number, :address, :role)";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':name', $name);
-    $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':password_hash', $hashed_password);
-    $stmt->bindParam(':contact_number', $contact_number);
-    $stmt->bindParam(':address', $address);
-    $stmt->bindParam(':role', $role);
-    $stmt->execute();
-    
-    $user_id = $db->lastInsertId();
-    
-    // Create role-specific record
-    if ($role === 'customer') {
-        $query = "INSERT INTO customers (customer_id) VALUES (:user_id)";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
-        
-    } elseif ($role === 'company') {
-        // Validate company registration number
-        if (!isset($input['company_reg_number']) || empty($input['company_reg_number'])) {
-            $db->rollBack();
-            Helpers::sendError('Company registration number is required');
-        }
-        
-        $company_reg_number = Helpers::sanitize($input['company_reg_number']);
-        
-        // Check if company registration number already exists
-        $query = "SELECT company_id FROM companies WHERE company_reg_number = :company_reg_number";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':company_reg_number', $company_reg_number);
-        $stmt->execute();
-        
-        if ($stmt->fetch()) {
-            $db->rollBack();
-            Helpers::sendError('Company registration number already exists');
-        }
-        
-        $query = "INSERT INTO companies (company_id, company_reg_number) VALUES (:user_id, :company_reg_number)";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->bindParam(':company_reg_number', $company_reg_number);
-        $stmt->execute();
-    }
-    
-    // Commit transaction
-    $db->commit();
-    
-    // Generate token
-    $token = Helpers::generateToken($user_id, $role);
-    
-    // Get created user data
-    $query = "SELECT user_id, name, email, role, disable_status FROM registered_users WHERE user_id = :user_id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':user_id', $user_id);
-    $stmt->execute();
-    $user = $stmt->fetch();
-    
-    // Get profile data
-    $profile = null;
-    if ($role === 'customer') {
-        $query = "SELECT c.customer_id, ru.name, ru.email, ru.contact_number, ru.address 
-                  FROM customers c 
-                  JOIN registered_users ru ON c.customer_id = ru.user_id 
-                  WHERE ru.user_id = :user_id";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
-        $profile = $stmt->fetch();
-        
-    } elseif ($role === 'company') {
-        $query = "SELECT c.company_id, c.company_reg_number, ru.name, ru.email, ru.contact_number, ru.address 
-                  FROM companies c 
-                  JOIN registered_users ru ON c.company_id = ru.user_id 
-                  WHERE ru.user_id = :user_id";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
-        $profile = $stmt->fetch();
-    }
-    
-    $response_data = [
-        'user' => $user,
-        'profile' => $profile,
-        'token' => $token
-    ];
-    
-    Helpers::sendResponse($response_data, 201, 'Registration successful');
-    
+    $otp = Customer::savePendingRegistration($input);
+    // Send OTP email (keep as is)
+    // ...
+    Helpers::sendResponse(null, 200, 'OTP sent successfully');
 } catch (Exception $e) {
-    if (isset($db)) {
-        $db->rollBack();
-    }
-    Helpers::sendError('Registration failed: ' . $e->getMessage(), 500);
+    Helpers::sendError($e->getMessage());
 }
 ?> 

@@ -3,6 +3,10 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Customer.php';
+require_once __DIR__ . '/../classes/Company.php';
+
 $allowed_origins = [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -49,43 +53,13 @@ if ($_SESSION['otp_' . $email] !== $otp) {
 
 $reg = $_SESSION['pending_registration_' . $email];
 
-// Database connection
-$database = new Database();
-$db = $database->getConnection();
-if (!$db) {
-    Helpers::sendError('Database connection failed', 500);
-}
-
 try {
-    // Check if email already exists
-    $query = "SELECT user_id FROM registered_users WHERE email = :email";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':email', $email);
-    $stmt->execute();
-    if ($stmt->fetch()) {
-        Helpers::sendError('Email already registered');
+    $database = new Database();
+    $db = $database->getConnection();
+    if (!$db) {
+        Helpers::sendError('Database connection failed', 500);
     }
-
-    $db->beginTransaction();
-    $hashed_password = Helpers::hashPassword($reg['password']);
-    $query = "INSERT INTO registered_users (name, email, password_hash, contact_number, address, role) VALUES (:name, :email, :password_hash, :contact_number, :address, :role)";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':name', $reg['name']);
-    $stmt->bindParam(':email', $reg['email']);
-    $stmt->bindParam(':password_hash', $hashed_password);
-    $stmt->bindParam(':contact_number', $reg['contact_number']);
-    $stmt->bindParam(':address', $reg['address']);
-    $stmt->bindParam(':role', $reg['role']);
-    $stmt->execute();
-    $user_id = $db->lastInsertId();
-    // Insert into customers table
-    $query = "INSERT INTO customers (customer_id) VALUES (:user_id)";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':user_id', $user_id);
-    $stmt->execute();
-    $db->commit();
-    unset($_SESSION['otp_' . $email]);
-    unset($_SESSION['pending_registration_' . $email]);
+    Customer::verifyOtpAndRegister($db, $email, $otp);
     Helpers::sendResponse(null, 201, 'Registration successful');
 } catch (Exception $e) {
     if (isset($db)) {
