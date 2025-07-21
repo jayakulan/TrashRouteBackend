@@ -57,8 +57,20 @@ if (!$db) {
 }
 
 try {
+    // Find user by email
+    $stmt = $db->prepare('SELECT user_id FROM registered_users WHERE email = ?');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user) {
+        Helpers::sendError('User not found');
+    }
+    $user_id = $user['user_id'];
     if ($action === 'send_otp') {
-        $otp = User::sendPasswordResetOtp($db, $email);
+        // Generate OTP and store with 1 hour expiry
+        $otp = rand(100000, 999999);
+        $expiration_time = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        $stmt = $db->prepare('INSERT INTO otp (user_id, otp_code, expiration_time) VALUES (?, ?, ?)');
+        $stmt->execute([$user_id, $otp, $expiration_time]);
         // Send OTP email
         $mail = new PHPMailer(true);
         try {
@@ -73,31 +85,49 @@ try {
             $mail->addAddress($email);
             $mail->isHTML(true);
             $mail->Subject = 'Your OTP for Password Reset';
-            $mail->Body = "<p>Your OTP for password reset is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 5 minutes.</p>";
+            $mail->Body = "<p>Your OTP for password reset is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 1 hour.</p>";
             $mail->send();
             Helpers::sendResponse(null, 200, 'OTP sent to your email');
         } catch (Exception $e) {
             Helpers::sendError('Failed to send OTP email: ' . $mail->ErrorInfo);
         }
     } elseif ($action === 'verify_otp') {
-        $otp = isset($input['otp']) ? Helpers::sanitize($input['otp']) : '';
-        if (empty($otp)) {
+        $otp_code = isset($input['otp']) ? Helpers::sanitize($input['otp']) : '';
+        if (empty($otp_code)) {
             Helpers::sendError('OTP is required');
         }
-        User::verifyPasswordResetOtp($email, $otp);
+        // Check OTP
+        $stmt = $db->prepare('SELECT * FROM otp WHERE user_id = ? AND otp_code = ? AND is_used = 0 AND expiration_time > NOW()');
+        $stmt->execute([$user_id, $otp_code]);
+        $otpRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$otpRow) {
+            Helpers::sendError('Invalid or expired OTP');
+        }
+        // Mark OTP as used
+        $db->prepare('UPDATE otp SET is_used = 1 WHERE otp_id = ?')->execute([$otpRow['otp_id']]);
         Helpers::sendResponse(null, 200, 'OTP verified');
     } elseif ($action === 'verify_otp_and_reset') {
-        $otp = isset($input['otp']) ? Helpers::sanitize($input['otp']) : '';
+        $otp_code = isset($input['otp']) ? Helpers::sanitize($input['otp']) : '';
         $new_password = $input['new_password'] ?? '';
         $confirm_password = $input['confirm_password'] ?? '';
-        if (empty($otp) || empty($new_password) || empty($confirm_password)) {
+        if (empty($otp_code) || empty($new_password) || empty($confirm_password)) {
             Helpers::sendError('OTP and new passwords are required');
         }
         if ($new_password !== $confirm_password) {
             Helpers::sendError('Passwords do not match');
         }
-        User::verifyPasswordResetOtp($email, $otp);
-        User::resetPassword($db, $email, $new_password);
+        // Check OTP
+        $stmt = $db->prepare('SELECT * FROM otp WHERE user_id = ? AND otp_code = ? AND is_used = 0 AND expiration_time > NOW()');
+        $stmt->execute([$user_id, $otp_code]);
+        $otpRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$otpRow) {
+            Helpers::sendError('Invalid or expired OTP');
+        }
+        // Mark OTP as used
+        $db->prepare('UPDATE otp SET is_used = 1 WHERE otp_id = ?')->execute([$otpRow['otp_id']]);
+        // Update password
+        $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
+        $db->prepare('UPDATE registered_users SET password_hash = ? WHERE user_id = ?')->execute([$new_password_hash, $user_id]);
         Helpers::sendResponse(null, 200, 'Password reset successful');
     } else {
         Helpers::sendError('Invalid action');

@@ -10,9 +10,6 @@ require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/../PHPMailer/src/Exception.php';
-require_once __DIR__ . '/../classes/User.php';
-require_once __DIR__ . '/../classes/Customer.php';
-require_once __DIR__ . '/../classes/Company.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -55,7 +52,7 @@ if (!$input) {
 }
 
 // Basic required fields check
-$required_fields = ['name', 'email', 'password', 'contact_number', 'address'];
+$required_fields = ['name', 'email', 'password', 'contact_number', 'address', 'company_reg_number'];
 
 $missing = [];
 foreach ($required_fields as $field) {
@@ -73,6 +70,7 @@ $email = Helpers::sanitize($input['email']);
 $password = $input['password'];  // Do NOT sanitize passwords
 $contact_number = Helpers::sanitize($input['contact_number']);
 $address = Helpers::sanitize($input['address']);
+$company_reg_number = Helpers::sanitize($input['company_reg_number']);
 
 // Validate email format
 if (!Helpers::validateEmail($email)) {
@@ -85,34 +83,47 @@ if (strlen($password) < 6) {
 }
 
 try {
-    $otp = Company::savePendingRegistration($input);
-
-    // Send OTP email using PHPMailer
-    $mail = new PHPMailer(true);
-
-    try {
-        $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = 'trashroute.wastemanagement@gmail.com';
-        $mail->Password = 'axlgbzwognxntkrl';
-        $mail->SMTPSecure = 'tls';
-        $mail->Port = 587;
-
-        $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
-        $mail->addAddress($email, $name);
-
-        $mail->isHTML(true);
-        $mail->Subject = 'Your OTP Verification Code';
-        $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 5 minutes.</p>";
-
-        $mail->send();
-
-    } catch (Exception $e) {
-        Helpers::sendError('Failed to send OTP email: ' . $mail->ErrorInfo);
+    $database = new Database();
+    $db = $database->getConnection();
+    if (!$db) {
+        Helpers::sendError('Database connection failed');
     }
-
+    // Check if user already exists
+    $stmt = $db->prepare('SELECT user_id FROM registered_users WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        Helpers::sendError('Email already registered');
+    }
+    // Insert user as pending
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+    $role = 'company';
+    $stmt = $db->prepare('INSERT INTO registered_users (name, email, password_hash, role, contact_number, address, disable_status) VALUES (?, ?, ?, ?, ?, ?, "pending")');
+    $stmt->execute([$name, $email, $password_hash, $role, $contact_number, $address]);
+    $user_id = $db->lastInsertId();
+    // Insert into companies table
+    $stmt = $db->prepare('INSERT INTO companies (company_id, company_reg_number) VALUES (?, ?)');
+    $stmt->execute([$user_id, $company_reg_number]);
+    // Generate and store OTP
+    $otp = rand(100000, 999999);
+    $expiration_time = date('Y-m-d H:i:s', strtotime('+10 hours'));
+    $stmt = $db->prepare('INSERT INTO otp (user_id, otp_code, expiration_time) VALUES (?, ?, ?)');
+    $stmt->execute([$user_id, $otp, $expiration_time]);
+    // Send OTP email
+    $mail = new PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host = 'smtp.gmail.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = 'trashroute.wastemanagement@gmail.com';
+    $mail->Password = 'axlgbzwognxntkrl';
+    $mail->SMTPSecure = 'tls';
+    $mail->Port = 587;
+    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
+    $mail->addAddress($email, $name);
+    $mail->isHTML(true);
+    $mail->Subject = 'Your OTP Verification Code';
+    $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 10 hours.</p>";
+    $mail->send();
     Helpers::sendResponse(null, 200, 'OTP sent successfully');
 } catch (Exception $e) {
-    Helpers::sendError($e->getMessage());
+    Helpers::sendError('Failed: ' . $e->getMessage());
 } 
