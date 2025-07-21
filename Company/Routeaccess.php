@@ -21,17 +21,23 @@ try {
         exit;
     }
 
-    // Find all pickup_requests assigned to this company via routes
-    $query = "SELECT pr.customer_id, pr.quantity FROM pickup_requests pr
-              INNER JOIN routes r ON pr.request_id = r.request_id
-              WHERE r.company_id = :company_id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':company_id', $company_id, PDO::PARAM_INT);
+    // Get optional waste_type from POST or GET
+    $waste_type = $_POST['waste_type'] ?? $_GET['waste_type'] ?? null;
+
+    // Build query with optional waste_type filter
+    if ($waste_type) {
+        $query = "SELECT customer_id, quantity FROM pickup_requests WHERE status = 'Request received' AND waste_type = :waste_type";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':waste_type', $waste_type);
+    } else {
+        $query = "SELECT customer_id, quantity FROM pickup_requests WHERE status = 'Request received'";
+        $stmt = $db->prepare($query);
+    }
     $stmt->execute();
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!$requests || count($requests) === 0) {
-        echo json_encode(['success' => false, 'message' => 'No pickup requests found for this company']);
+        echo json_encode(['success' => false, 'message' => 'No pickup requests found']);
         exit;
     }
 
@@ -54,4 +60,4 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     exit;
-} 
+}

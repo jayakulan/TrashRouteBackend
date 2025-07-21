@@ -10,6 +10,9 @@ require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/../PHPMailer/src/Exception.php';
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Customer.php';
+require_once __DIR__ . '/../classes/Company.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -81,42 +84,35 @@ if (strlen($password) < 6) {
     Helpers::sendError('Password must be at least 6 characters');
 }
 
-// Generate OTP (6 digit)
-$otp = Helpers::generateOTP(6);
-
-// Save OTP and user data in session for later verification
-$_SESSION['otp_' . $email] = $otp;
-$_SESSION['pending_registration_' . $email] = [
-    'name' => $name,
-    'email' => $email,
-    'password' => $password,
-    'contact_number' => $contact_number,
-    'address' => $address,
-    'role' => 'company',
-];
-
-// Send OTP email using PHPMailer
-$mail = new PHPMailer(true);
-
 try {
-    $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'trashroute.wastemanagement@gmail.com';
-    $mail->Password = 'axlgbzwognxntkrl';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
+    $otp = Company::savePendingRegistration($input);
 
-    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
-    $mail->addAddress($email, $name);
+    // Send OTP email using PHPMailer
+    $mail = new PHPMailer(true);
 
-    $mail->isHTML(true);
-    $mail->Subject = 'Your OTP Verification Code';
-    $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 5 minutes.</p>";
+    try {
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'trashroute.wastemanagement@gmail.com';
+        $mail->Password = 'axlgbzwognxntkrl';
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
 
-    $mail->send();
+        $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
+        $mail->addAddress($email, $name);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Your OTP Verification Code';
+        $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 5 minutes.</p>";
+
+        $mail->send();
+
+    } catch (Exception $e) {
+        Helpers::sendError('Failed to send OTP email: ' . $mail->ErrorInfo);
+    }
 
     Helpers::sendResponse(null, 200, 'OTP sent successfully');
 } catch (Exception $e) {
-    Helpers::sendError('Failed to send OTP email: ' . $mail->ErrorInfo);
+    Helpers::sendError($e->getMessage());
 } 

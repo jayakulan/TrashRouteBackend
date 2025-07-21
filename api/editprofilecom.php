@@ -7,6 +7,9 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/helpers.php';
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/Customer.php';
+require_once __DIR__ . '/../classes/Company.php';
 
 $allowed_origins = [
     'http://localhost:5173',
@@ -64,16 +67,8 @@ try {
         Helpers::sendError('Email already in use by another account');
     }
 
-    // Update registered_users table
-    $query = "UPDATE registered_users SET name = :name, email = :email, contact_number = :contact_number, address = :address WHERE user_id = :user_id AND role = 'company'";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':name', $name);
-    $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':contact_number', $contact_number);
-    $stmt->bindParam(':address', $address);
-    $stmt->bindParam(':user_id', $user_id);
-    $stmt->execute();
-
+    $company = new Company($user_id, $email, $name, null);
+    $company->updateProfile($db, $user_id, $name, $email, $contact_number, $address);
     Helpers::sendResponse(null, 200, 'Profile updated successfully');
 } catch (Exception $e) {
     Helpers::sendError('Profile update failed: ' . $e->getMessage(), 500);
