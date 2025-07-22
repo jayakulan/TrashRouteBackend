@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Include database configuration
 require_once '../config/database.php';
+require_once '../classes/Admin.php';
 
 try {
     // Create database connection using the Database class
@@ -49,25 +50,8 @@ try {
         exit();
     }
 
-    // Query to fetch customer data
-    $query = "
-        SELECT 
-            c.customer_id as CustomerID,
-            ru.name as Name,
-            ru.email as Email,
-            ru.contact_number as Phone,
-            ru.address as Location,
-            ru.disable_status as Status,
-            ru.created_at as JoinDate
-        FROM customers c
-        INNER JOIN registered_users ru ON c.customer_id = ru.user_id
-        WHERE ru.role = 'customer'
-        ORDER BY ru.created_at DESC
-    ";
-
-    $stmt = $pdo->prepare($query);
-    $stmt->execute();
-    $customers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch customers using OOP method
+    $customers = Admin::getAllCustomers($pdo);
 
     // Format the response
     $formattedCustomers = [];
@@ -79,7 +63,8 @@ try {
             'phone' => $customer['Phone'] ?: 'N/A',
             'location' => $customer['Location'] ?: 'N/A',
             'status' => ucfirst($customer['Status']),
-            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate']))
+            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate'])),
+            'role' => $customer['Role']
         ];
     }
 

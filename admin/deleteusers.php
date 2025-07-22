@@ -39,6 +39,7 @@ if ($action !== 'delete') {
 
 // Include database configuration
 require_once '../config/database.php';
+require_once '../classes/Admin.php';
 
 try {
     // Get the customer ID from the request
@@ -68,96 +69,19 @@ try {
     $pdo->beginTransaction();
 
     try {
-        // First, verify the customer exists and get user_id
-        $stmt = $pdo->prepare("SELECT customer_id FROM customers WHERE customer_id = ?");
-        $stmt->execute([$customerId]);
-        
-        if ($stmt->rowCount() == 0) {
-            throw new Exception("Customer not found");
+        // Instead of deleting, disable the customer
+        $result = Admin::disableCustomer($pdo, $customerId);
+        if ($result) {
+            $pdo->commit();
+            echo json_encode([
+                'success' => true,
+                'message' => 'Customer status set to disabled',
+                'disabledCustomerId' => $formattedId
+            ]);
+        } else {
+            $pdo->rollBack();
+            throw new Exception("Failed to disable customer or customer not found");
         }
-
-        // Check if customer has any related records that would prevent deletion
-        // Check pickup_requests
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM pickup_requests WHERE customer_id = ?");
-        $stmt->execute([$customerId]);
-        $pickupCount = $stmt->fetch()['count'];
-
-        // Check customer_feedback
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM customer_feedback WHERE customer_id = ?");
-        $stmt->execute([$customerId]);
-        $feedbackCount = $stmt->fetch()['count'];
-
-        // Check notifications
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM notifications WHERE user_id = ?");
-        $stmt->execute([$customerId]);
-        $notificationCount = $stmt->fetch()['count'];
-
-        // Check OTP records
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM otp WHERE user_id = ?");
-        $stmt->execute([$customerId]);
-        $otpCount = $stmt->fetch()['count'];
-
-        // Check contact_us
-        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM contact_us WHERE user_id = ?");
-        $stmt->execute([$customerId]);
-        $contactCount = $stmt->fetch()['count'];
-
-        // Delete related records first (due to foreign key constraints)
-        
-        // Delete from customer_feedback
-        if ($feedbackCount > 0) {
-            $stmt = $pdo->prepare("DELETE FROM customer_feedback WHERE customer_id = ?");
-            $stmt->execute([$customerId]);
-        }
-
-        // Delete from pickup_requests
-        if ($pickupCount > 0) {
-            $stmt = $pdo->prepare("DELETE FROM pickup_requests WHERE customer_id = ?");
-            $stmt->execute([$customerId]);
-        }
-
-        // Delete from notifications
-        if ($notificationCount > 0) {
-            $stmt = $pdo->prepare("DELETE FROM notifications WHERE user_id = ?");
-            $stmt->execute([$customerId]);
-        }
-
-        // Delete from otp
-        if ($otpCount > 0) {
-            $stmt = $pdo->prepare("DELETE FROM otp WHERE user_id = ?");
-            $stmt->execute([$customerId]);
-        }
-
-        // Delete from contact_us
-        if ($contactCount > 0) {
-            $stmt = $pdo->prepare("DELETE FROM contact_us WHERE user_id = ?");
-            $stmt->execute([$customerId]);
-        }
-
-        // Delete from customers table
-        $stmt = $pdo->prepare("DELETE FROM customers WHERE customer_id = ?");
-        $stmt->execute([$customerId]);
-
-        // Delete from registered_users table
-        $stmt = $pdo->prepare("DELETE FROM registered_users WHERE user_id = ?");
-        $stmt->execute([$customerId]);
-
-        // Commit transaction
-        $pdo->commit();
-
-        // Return success response
-        echo json_encode([
-            'success' => true,
-            'message' => 'Customer deleted successfully',
-            'deletedCustomerId' => $formattedId,
-            'deletedRecords' => [
-                'pickup_requests' => $pickupCount,
-                'customer_feedback' => $feedbackCount,
-                'notifications' => $notificationCount,
-                'otp' => $otpCount,
-                'contact_us' => $contactCount
-            ]
-        ]);
 
     } catch (Exception $e) {
         // Rollback transaction on error
