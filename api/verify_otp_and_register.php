@@ -57,6 +57,13 @@ try {
     $db->prepare('UPDATE otp SET is_used = 1 WHERE otp_id = ?')->execute([$otpRow['otp_id']]);
     // Activate user
     $db->prepare('UPDATE registered_users SET disable_status = "active" WHERE user_id = ?')->execute([$user_id]);
+    // Insert into customers table if not present
+    $stmt = $db->prepare('SELECT customer_id FROM customers WHERE customer_id = ?');
+    $stmt->execute([$user_id]);
+    if (!$stmt->fetch()) {
+        $stmt = $db->prepare('INSERT INTO customers (customer_id) VALUES (?)');
+        $stmt->execute([$user_id]);
+    }
     Helpers::sendResponse(null, 201, 'Registration successful');
 } catch (Exception $e) {
     Helpers::sendError('Registration failed: ' . $e->getMessage(), 500);

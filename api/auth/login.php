@@ -24,6 +24,7 @@ require_once '../../config/database.php';
 require_once '../../utils/helpers.php';
 require_once '../../classes/Customer.php';
 require_once '../../classes/Company.php';
+require_once '../../classes/Admin.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Helpers::sendError('Method not allowed', 405);
@@ -74,6 +75,8 @@ try {
         $result = Customer::login($db, $email, $password);
     } elseif ($role === 'company') {
         $result = Company::login($db, $email, $password);
+    } elseif ($role === 'admin') {
+        $result = Admin::login($db, $email, $password);
     } else {
         Helpers::sendError('Invalid role in database');
     }
