@@ -6,6 +6,9 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Max-Age: 86400'); // 24 hours
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 
 // Handle preflight OPTIONS request immediately
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -39,7 +42,36 @@ if ($action !== 'delete') {
 
 // Include database configuration
 require_once '../config/database.php';
+require_once '../utils/session_auth_middleware.php';
 require_once '../classes/Admin.php';
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Enhanced admin authentication with multiple security checks
+try {
+    $adminUser = SessionAuthMiddleware::requireAdminAuth();
+    
+    // Additional security: Check for session timeout
+    if (!SessionAuthMiddleware::isAdminAuthenticated()) {
+        throw new Exception('Session expired');
+    }
+    
+    // Refresh session to extend timeout
+    SessionAuthMiddleware::refreshSession();
+    
+} catch (Exception $e) {
+    http_response_code(200);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Access denied',
+        'message' => $e->getMessage()
+    ]);
+    exit();
+}
 
 try {
     // Get the customer ID from the request

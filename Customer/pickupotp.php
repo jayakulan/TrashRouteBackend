@@ -13,6 +13,9 @@ if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -21,23 +24,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../utils/helpers.php';
+require_once '../utils/session_auth_middleware.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Helpers::sendError('Method not allowed', 405);
 }
 
-// Get customer ID from token
-$token = Helpers::getBearerToken();
-if (!$token) {
-    Helpers::sendError('No token provided', 401);
+// Check customer authentication (session + JWT fallback)
+try {
+    $customerUser = SessionAuthMiddleware::requireCustomerAuth();
+    $customer_id = $customerUser['user_id'];
+} catch (Exception $e) {
+    Helpers::sendError('Customer authentication failed: ' . $e->getMessage(), 401);
 }
-
-$payload = Helpers::verifyToken($token);
-if (!$payload || $payload['role'] !== 'customer') {
-    Helpers::sendError('Invalid token or unauthorized access', 401);
-}
-
-$customer_id = $payload['user_id'];
 
 try {
     $database = new Database();

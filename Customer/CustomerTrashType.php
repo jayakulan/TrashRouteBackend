@@ -20,6 +20,9 @@ header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json");
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -32,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     require_once '../config/database.php';
     require_once '../utils/helpers.php';
+    require_once '../utils/session_auth_middleware.php';
 } catch (Exception $e) {
     error_log("Error including files: " . $e->getMessage());
     http_response_code(500);
@@ -61,16 +65,21 @@ try {
         throw new Exception('No waste types provided');
     }
     
-    // Get current user from JWT token
-    $currentUser = Helpers::getCurrentUser();
-    
-    error_log("Current user from token: " . print_r($currentUser, true));
-    
-    if (!$currentUser) {
-        throw new Exception('User not authenticated. Please login again.');
+    // Check customer authentication (session + JWT fallback)
+    try {
+        $customerUser = SessionAuthMiddleware::requireCustomerAuth();
+        $customerId = $customerUser['user_id'];
+        error_log("Customer authenticated via session/JWT: " . $customerId);
+    } catch (Exception $e) {
+        error_log("Customer authentication failed: " . $e->getMessage());
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Authentication failed',
+            'message' => $e->getMessage()
+        ]);
+        exit();
     }
-    
-    $customerId = $currentUser['user_id'];
     error_log("Customer ID: " . $customerId);
     
     // Get database connection
