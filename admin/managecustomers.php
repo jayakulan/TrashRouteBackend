@@ -4,6 +4,9 @@ header('Access-Control-Allow-Origin: http://localhost:5175');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -13,7 +16,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Include database configuration
 require_once '../config/database.php';
+require_once '../utils/session_auth_middleware.php';
 require_once '../classes/Admin.php';
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Enhanced admin authentication with multiple security checks
+try {
+    $adminUser = SessionAuthMiddleware::requireAdminAuth();
+    
+    // Additional security: Check for session timeout
+    if (!SessionAuthMiddleware::isAdminAuthenticated()) {
+        throw new Exception('Session expired');
+    }
+    
+    // Refresh session to extend timeout
+    SessionAuthMiddleware::refreshSession();
+    
+} catch (Exception $e) {
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Access denied',
+        'message' => $e->getMessage()
+    ]);
+    exit();
+}
 
 try {
     // Create database connection using the Database class

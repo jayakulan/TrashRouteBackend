@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // ✅ CORS: Allow multiple frontend origins (e.g., 5173, 5175)
 $allowed_origins = ['http://localhost:5173', 'http://localhost:5175'];
@@ -22,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ✅ Core login logic begins here
 require_once '../../config/database.php';
 require_once '../../utils/helpers.php';
+require_once '../../utils/session_auth_middleware.php';
 require_once '../../classes/Customer.php';
 require_once '../../classes/Company.php';
 require_once '../../classes/Admin.php';
@@ -84,6 +87,17 @@ try {
     $profile = $result['profile'];
     unset($user['password_hash']);
     $token = Helpers::generateToken($user['user_id'], $user['role']);
+    
+    // Set session data for admin and company users
+    if ($user['role'] === 'admin' || $user['role'] === 'company') {
+        // Simple session setting without middleware for now
+        $_SESSION['user_id'] = $user['user_id'];
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['email'] = $user['email'] ?? null;
+        $_SESSION['name'] = $user['name'] ?? null;
+        $_SESSION['login_time'] = time();
+    }
+    
     Helpers::sendResponse([
         'user' => $user,
         'profile' => $profile,

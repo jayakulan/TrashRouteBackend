@@ -1,10 +1,40 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
 
 require_once '../config/database.php';
+require_once '../utils/session_auth_middleware.php';
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Check company authentication
+try {
+    $companyUser = SessionAuthMiddleware::requireCompanyAuth();
+    // Debug: Log successful authentication
+    error_log("Company authentication successful for user: " . $companyUser['user_id']);
+} catch (Exception $e) {
+    error_log("Company authentication failed: " . $e->getMessage());
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Authentication failed',
+        'message' => $e->getMessage()
+    ]);
+    exit();
+}
 
 try {
     $database = new Database();
