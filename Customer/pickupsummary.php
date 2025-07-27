@@ -84,11 +84,32 @@ try {
 
     // 4. Use the first request for location/status
     $first = $requests[0];
+    
+    // Get address from coordinates using reverse geocoding
+    $address = '';
+    $latitude = $first['latitude'];
+    $longitude = $first['longitude'];
+    
+    // Simple reverse geocoding using Google Maps API (you may need to add your API key)
+    if (!empty($latitude) && !empty($longitude)) {
+        $url = "https://maps.googleapis.com/maps/api/geocode/json?latlng={$latitude},{$longitude}&key=AIzaSyA5iEKgAwrJWVkCMAsD7_IilJ0YSVf_VGk";
+        $response = file_get_contents($url);
+        $data = json_decode($response, true);
+        
+        if ($data && $data['status'] === 'OK' && !empty($data['results'])) {
+            $address = $data['results'][0]['formatted_address'];
+        }
+    }
+    
     $response_data = [
         'request_id' => $first['request_id'],
         'waste_types' => $waste_types_string,
         'approximate_total_weight' => $total_weight . ' kg',
-        'pickup_location' => 'Lat: ' . $first['latitude'] . ', Long: ' . $first['longitude'],
+        'pickup_location' => $address ? $address : 'Lat: ' . $latitude . ', Long: ' . $longitude,
+        'coordinates' => [
+            'latitude' => $latitude,
+            'longitude' => $longitude
+        ],
         'status' => $first['status'],
         'timestamp' => $first['timestamp'],
         'total_requests' => count($requests)

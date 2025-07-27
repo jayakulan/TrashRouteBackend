@@ -33,7 +33,6 @@ try {
     
     // Extract data
     $name = trim($input['name'] ?? '');
-    $email = trim($input['email'] ?? '');
     $phone = trim($input['phone'] ?? '');
     $address = trim($input['address'] ?? '');
     $currentPassword = $input['currentPassword'] ?? '';
@@ -43,14 +42,6 @@ try {
     // Validate required fields
     if (empty($name)) {
         throw new Exception('Name is required');
-    }
-    
-    if (empty($email)) {
-        throw new Exception('Email is required');
-    }
-    
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Invalid email format');
     }
     
     // Start session to get user ID
@@ -71,14 +62,7 @@ try {
         throw new Exception('User not found');
     }
     
-    // Check if email is already taken by another user
-    if ($email !== $user['email']) {
-        $stmt = $pdo->prepare("SELECT id FROM customers WHERE email = ? AND id != ?");
-        $stmt->execute([$email, $userId]);
-        if ($stmt->fetch()) {
-            throw new Exception('Email is already taken by another user');
-        }
-    }
+
     
     // Handle password change if provided
     $passwordUpdate = '';
@@ -113,7 +97,6 @@ try {
     // Prepare update query
     $updateFields = [
         'name' => $name,
-        'email' => $email,
         'phone' => $phone,
         'address' => $address
     ];
@@ -143,8 +126,8 @@ try {
         throw new Exception('Failed to update profile');
     }
     
-    $customer = new Customer($userId, $email, $name, $address);
-    $updatedUser = $customer->updateProfile($pdo, $userId, $name, $email, $phone, $address, $currentPassword, $newPassword, $confirmPassword);
+    $customer = new Customer($userId, $user['email'], $name, $address);
+    $updatedUser = $customer->updateProfile($pdo, $userId, $name, $user['email'], $phone, $address, $currentPassword, $newPassword, $confirmPassword);
     // Update session data
     $_SESSION['user_name'] = $updatedUser['name'];
     $_SESSION['user_email'] = $updatedUser['email'];

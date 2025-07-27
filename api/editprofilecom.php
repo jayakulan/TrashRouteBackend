@@ -39,15 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 $user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
 $name = isset($input['name']) ? Helpers::sanitize($input['name']) : '';
-$email = isset($input['email']) ? Helpers::sanitize($input['email']) : '';
 $contact_number = isset($input['contact_number']) ? Helpers::sanitize($input['contact_number']) : '';
 $address = isset($input['address']) ? Helpers::sanitize($input['address']) : '';
 
-if (!$user_id || !$name || !$email || !$contact_number || !$address) {
+if (!$user_id || !$name || !$contact_number || !$address) {
     Helpers::sendError('All fields are required');
-}
-if (!Helpers::validateEmail($email)) {
-    Helpers::sendError('Invalid email format');
 }
 
 $database = new Database();
@@ -57,18 +53,19 @@ if (!$db) {
 }
 
 try {
-    // Check if email is already used by another user
-    $query = "SELECT user_id FROM registered_users WHERE email = :email AND user_id != :user_id";
+    // Get current user email from database
+    $query = "SELECT email FROM registered_users WHERE user_id = :user_id";
     $stmt = $db->prepare($query);
-    $stmt->bindParam(':email', $email);
     $stmt->bindParam(':user_id', $user_id);
     $stmt->execute();
-    if ($stmt->fetch()) {
-        Helpers::sendError('Email already in use by another account');
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) {
+        Helpers::sendError('User not found');
     }
 
-    $company = new Company($user_id, $email, $name, null);
-    $company->updateProfile($db, $user_id, $name, $email, $contact_number, $address);
+    $company = new Company($user_id, $user['email'], $name, null);
+    $company->updateProfile($db, $user_id, $name, $user['email'], $contact_number, $address);
     Helpers::sendResponse(null, 200, 'Profile updated successfully');
 } catch (Exception $e) {
     Helpers::sendError('Profile update failed: ' . $e->getMessage(), 500);
