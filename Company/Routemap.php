@@ -55,7 +55,8 @@ try {
     }
 
     // Get all pickup requests for this route (using route_request_mapping)
-    $query = "SELECT pr.request_id, pr.customer_id, pr.waste_type, pr.quantity, pr.status, ru.name as customer_name, ru.address, ru.contact_number
+    $query = "SELECT pr.request_id, pr.customer_id, pr.waste_type, pr.quantity, pr.status, pr.latitude, pr.longitude, 
+              ru.name as customer_name, ru.address, ru.contact_number
               FROM route_request_mapping rrm
               INNER JOIN pickup_requests pr ON rrm.request_id = pr.request_id
               INNER JOIN customers c ON pr.customer_id = c.customer_id
@@ -75,14 +76,15 @@ try {
     $totalQuantity = 0;
     foreach ($requests as $row) {
         $households[] = [
-            'id' => $row['customer_id'],
-            'request_id' => $row['request_id'], // Add request_id for frontend use
-            'address' => $row['address'] ?? 'N/A',
-            'contact' => $row['customer_name'] ?? 'N/A',
+            'request_id' => $row['request_id'],
+            'name' => $row['customer_name'] ?? 'N/A',
+            'latitude' => $row['latitude'] ?? 0,
+            'longitude' => $row['longitude'] ?? 0,
+            'contact' => $row['contact_number'] ?? 'N/A',
             'notes' => "Waste Type: {$row['waste_type']}, Quantity: {$row['quantity']} kg",
             'collected' => $row['status'] === 'Completed',
             'status' => $row['status'],
-            'contact_number' => $row['contact_number'],
+            'address' => $row['address'] ?? 'N/A',
         ];
         $totalQuantity += (int)$row['quantity'];
     }
