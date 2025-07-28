@@ -1,5 +1,9 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
+    // Configure session for cross-origin requests
+    ini_set('session.cookie_samesite', 'None');
+    ini_set('session.cookie_secure', '0'); // Set to 1 in production with HTTPS
+    ini_set('session.cookie_httponly', '1');
     session_start();
 }
 
@@ -88,15 +92,16 @@ try {
     unset($user['password_hash']);
     $token = Helpers::generateToken($user['user_id'], $user['role']);
     
-    // Set session data for admin and company users
-    if ($user['role'] === 'admin' || $user['role'] === 'company') {
-        // Simple session setting without middleware for now
-        $_SESSION['user_id'] = $user['user_id'];
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['email'] = $user['email'] ?? null;
-        $_SESSION['name'] = $user['name'] ?? null;
-        $_SESSION['login_time'] = time();
-    }
+    // Set session data for all users (admin, company, and customer)
+    $_SESSION['user_id'] = $user['user_id'];
+    $_SESSION['role'] = $user['role'];
+    $_SESSION['email'] = $user['email'] ?? null;
+    $_SESSION['name'] = $user['name'] ?? null;
+    $_SESSION['login_time'] = time();
+    
+    // Debug: Log session data after setting
+    error_log("Login - Session data set: " . json_encode($_SESSION));
+    error_log("Login - Session ID: " . session_id());
     
     Helpers::sendResponse([
         'user' => $user,
