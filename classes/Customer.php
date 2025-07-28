@@ -33,26 +33,30 @@ class Customer extends User {
     }
 
     public function updateProfile($db, $userId, $name, $email, $phone, $address, $currentPassword = null, $newPassword = null, $confirmPassword = null) {
-        $stmt = $db->prepare("SELECT * FROM customers WHERE id = ?");
+        // First, get user data from registered_users table
+        $stmt = $db->prepare("SELECT * FROM registered_users WHERE user_id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
             throw new Exception('User not found');
         }
+        
+        // Check if email is being changed and if it's already taken
         if ($email !== $user['email']) {
-            $stmt = $db->prepare("SELECT id FROM customers WHERE email = ? AND id != ?");
+            $stmt = $db->prepare("SELECT user_id FROM registered_users WHERE email = ? AND user_id != ?");
             $stmt->execute([$email, $userId]);
             if ($stmt->fetch()) {
                 throw new Exception('Email is already taken by another user');
             }
         }
+        
         $passwordUpdate = '';
         $passwordParams = [];
         if ($currentPassword || $newPassword || $confirmPassword) {
             if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
                 throw new Exception('All password fields are required for password change');
             }
-            if (!password_verify($currentPassword, $user['password'])) {
+            if (!password_verify($currentPassword, $user['password_hash'])) {
                 throw new Exception('Current password is incorrect');
             }
             if (strlen($newPassword) < 6) {
@@ -62,21 +66,24 @@ class Customer extends User {
                 throw new Exception('New password and confirm password do not match');
             }
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-            $passwordUpdate = ', password = ?';
+            $passwordUpdate = ', password_hash = ?';
             $passwordParams[] = $hashedPassword;
         }
+        
         $updateFields = [$name, $email, $phone, $address];
         if (!empty($passwordParams)) {
             $updateFields = array_merge($updateFields, $passwordParams);
         }
         $updateFields[] = $userId;
-        $sql = "UPDATE customers SET name = ?, email = ?, phone = ?, address = ?" . $passwordUpdate . " WHERE id = ?";
+        
+        $sql = "UPDATE registered_users SET name = ?, email = ?, contact_number = ?, address = ?" . $passwordUpdate . " WHERE user_id = ?";
         $stmt = $db->prepare($sql);
         $result = $stmt->execute($updateFields);
         if (!$result) {
             throw new Exception('Failed to update profile');
         }
-        $stmt = $db->prepare("SELECT id, name, email, phone, address, created_at FROM customers WHERE id = ?");
+        
+        $stmt = $db->prepare("SELECT user_id, name, email, contact_number, address, created_at FROM registered_users WHERE user_id = ?");
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
