@@ -16,7 +16,7 @@ require_once '../utils/session_auth_middleware.php';
 
 try {
     // Check admin authentication
-    $adminUser = SessionAuthMiddleware::requireAdminAuth();
+    $adminUser = SessionAuthMiddleware::requireAdminJWTAuth();
     
     // Get session information
     $sessionInfo = [
@@ -31,7 +31,7 @@ try {
         'user_agent' => $_SESSION['user_agent'] ?? null,
         'session_timeout' => isset($_SESSION['login_time']) ? date('Y-m-d H:i:s', $_SESSION['login_time'] + 1800) : null,
         'time_remaining' => isset($_SESSION['login_time']) ? (1800 - (time() - $_SESSION['login_time'])) : null,
-        'is_valid' => SessionAuthMiddleware::isAdminAuthenticated(),
+        'is_valid' => SessionAuthMiddleware::isAdminJWTAuthenticated(),
         'access_log' => $_SESSION['access_log'] ?? []
     ];
     
