@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/Admin.php';
+require_once __DIR__ . '/../utils/helpers.php';
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -37,12 +38,15 @@ try {
         throw new Exception('Name is required');
     }
 
-    // Start session to get admin ID
-    session_start();
-    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-        throw new Exception('Admin not authenticated');
+    // JWT token authentication using integrated middleware
+    require_once __DIR__ . '/../utils/session_auth_middleware.php';
+    
+    try {
+        $adminUser = SessionAuthMiddleware::requireAdminJWTAuth();
+        $adminId = $adminUser['user_id'];
+    } catch (Exception $e) {
+        throw new Exception($e->getMessage());
     }
-    $adminId = $_SESSION['user_id'];
 
     // Get current admin data
     $stmt = $pdo->prepare("SELECT * FROM registered_users WHERE user_id = ? AND role = 'admin'");
@@ -65,9 +69,6 @@ try {
     $stmt = $pdo->prepare("SELECT user_id, name, email, contact_number, address FROM registered_users WHERE user_id = ? AND role = 'admin'");
     $stmt->execute([$adminId]);
     $updatedAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Update session data
-    $_SESSION['user_name'] = $updatedAdmin['name'];
 
     echo json_encode([
         'success' => true,

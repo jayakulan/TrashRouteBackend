@@ -23,51 +23,15 @@ require_once '../config/database.php';
 require_once '../utils/session_auth_middleware.php';
 require_once '../classes/Admin.php';
 
-// Admin authentication check
-$isAdminAuthenticated = false;
-
-// Check session first
-if (isset($_SESSION['user_id']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    $isAdminAuthenticated = true;
-}
-
-// Check JWT token if session is not available
-if (!$isAdminAuthenticated) {
-    require_once '../utils/helpers.php';
-    $token = Helpers::getBearerToken();
-    if ($token) {
-        $payload = Helpers::verifyToken($token);
-        if ($payload && $payload['role'] === 'admin') {
-            $isAdminAuthenticated = true;
-            // Set session data from token
-            $_SESSION['user_id'] = $payload['user_id'];
-            $_SESSION['role'] = $payload['role'];
-            $_SESSION['login_time'] = time();
-        }
-    }
-}
-
-// For development/testing, allow access if no authentication is found
-if (!$isAdminAuthenticated) {
-    // Log the authentication attempt for debugging
-    error_log("Admin access attempt - Session: " . json_encode($_SESSION) . ", Token: " . (isset($_SERVER['HTTP_AUTHORIZATION']) ? 'present' : 'missing'));
-    
-    // For now, allow access for testing purposes
-    $isAdminAuthenticated = true;
-    error_log("Allowing admin access for testing");
-}
-
-if (!$isAdminAuthenticated) {
+// Admin JWT authentication using integrated middleware
+try {
+    $adminUser = SessionAuthMiddleware::requireAdminJWTAuth();
+} catch (Exception $e) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
         'error' => 'Access denied',
-        'message' => 'Admin authentication required',
-        'debug' => [
-            'session_data' => $_SESSION,
-            'cookies' => $_COOKIE,
-            'session_id' => session_id()
-        ]
+        'message' => $e->getMessage()
     ]);
     exit();
 }

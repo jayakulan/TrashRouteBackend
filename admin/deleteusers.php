@@ -51,20 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Enhanced admin authentication with multiple security checks
+// Admin JWT authentication
 try {
-    $adminUser = SessionAuthMiddleware::requireAdminAuth();
-    
-    // Additional security: Check for session timeout
-    if (!SessionAuthMiddleware::isAdminAuthenticated()) {
-        throw new Exception('Session expired');
-    }
-    
-    // Refresh session to extend timeout
-    SessionAuthMiddleware::refreshSession();
-    
+    $adminUser = SessionAuthMiddleware::requireAdminJWTAuth();
 } catch (Exception $e) {
-    http_response_code(200);
+    http_response_code(401);
     echo json_encode([
         'success' => false,
         'error' => 'Access denied',

@@ -589,5 +589,95 @@ class SessionAuthMiddleware {
         }
         return false;
     }
+    
+    // ========================================
+    // ADMIN JWT AUTHENTICATION METHODS
+    // ========================================
+    
+    /**
+     * Require admin JWT authentication (primary method for admin pages)
+     * @return array User data from JWT token
+     * @throws Exception if authentication fails
+     */
+    public static function requireAdminJWTAuth() {
+        $token = Helpers::getBearerToken();
+        
+        if (!$token) {
+            throw new Exception('JWT token required');
+        }
+        
+        $payload = Helpers::verifyToken($token);
+        if (!$payload) {
+            throw new Exception('Invalid JWT token');
+        }
+        
+        if ($payload['role'] !== 'admin') {
+            throw new Exception('Admin role required');
+        }
+        
+        // Set session data from JWT token for compatibility with existing code
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['user_id'] = $payload['user_id'];
+        $_SESSION['role'] = $payload['role'];
+        $_SESSION['login_time'] = time();
+        
+        return [
+            'user_id' => $payload['user_id'],
+            'role' => $payload['role'],
+            'email' => null,
+            'name' => null
+        ];
+    }
+    
+    /**
+     * Check if user has valid admin JWT token
+     * @return bool
+     */
+    public static function isAdminJWTAuthenticated() {
+        try {
+            self::requireAdminJWTAuth();
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Get admin user data from JWT token
+     * @return array|null User data or null if not authenticated
+     */
+    public static function getAdminJWTUser() {
+        try {
+            return self::requireAdminJWTAuth();
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+    
+    /**
+     * Validate admin JWT token and return user data
+     * @param bool $returnJson Whether to return JSON error or throw exception
+     * @return array User data
+     * @throws Exception if authentication fails and returnJson is false
+     */
+    public static function validateAdminJWTToken($returnJson = true) {
+        try {
+            return self::requireAdminJWTAuth();
+        } catch (Exception $e) {
+            if ($returnJson) {
+                http_response_code(401);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Authentication failed',
+                    'message' => $e->getMessage()
+                ]);
+                exit();
+            } else {
+                throw $e;
+            }
+        }
+    }
 }
 ?> 

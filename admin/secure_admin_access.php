@@ -19,14 +19,14 @@ try {
     $securityChecks = [];
     
     // 1. Basic admin authentication
-    $adminUser = SessionAuthMiddleware::requireAdminAuth();
+    $adminUser = SessionAuthMiddleware::requireAdminJWTAuth();
     $securityChecks['basic_auth'] = true;
     
-    // 2. Check session validity
-    if (!SessionAuthMiddleware::isAdminAuthenticated()) {
-        throw new Exception('Session expired or invalid');
+    // 2. Check JWT token validity
+    if (!SessionAuthMiddleware::isAdminJWTAuthenticated()) {
+        throw new Exception('JWT token expired or invalid');
     }
-    $securityChecks['session_valid'] = true;
+    $securityChecks['jwt_valid'] = true;
     
     // 3. Check for suspicious activity
     $currentTime = time();
@@ -55,8 +55,8 @@ try {
     }
     $securityChecks['user_agent'] = true;
     
-    // 6. Refresh session to extend timeout
-    SessionAuthMiddleware::refreshSession();
+    // 6. JWT token is stateless, no need to refresh session
+    // Session data is set from JWT token for compatibility
     
     // 7. Log access attempt
     $accessLog = [
