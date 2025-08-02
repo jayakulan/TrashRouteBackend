@@ -31,10 +31,7 @@ SessionAuthMiddleware::requireCompanyAuth();
 try {
     $input = json_decode(file_get_contents('php://input'), true);
 
-    // Debug: log received input
-    file_put_contents('debug_feedback.log', "=== New Feedback Submission ===\n", FILE_APPEND);
-    file_put_contents('debug_feedback.log', "Timestamp: " . date('Y-m-d H:i:s') . "\n", FILE_APPEND);
-    file_put_contents('debug_feedback.log', "Input: " . print_r($input, true) . "\n", FILE_APPEND);
+
 
     // Validate required fields
     if (
@@ -63,11 +60,8 @@ try {
     $company = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$company) {
-        file_put_contents('debug_feedback.log', "ERROR: Company ID $company_id not found in database\n", FILE_APPEND);
         echo json_encode(['success' => false, 'message' => 'Invalid company_id: ' . $company_id . '. Company does not exist in database.']);
         exit;
-    } else {
-        file_put_contents('debug_feedback.log', "SUCCESS: Company ID $company_id validated\n", FILE_APPEND);
     }
 
     // Optional: Check if OTP was verified in pickup_requests

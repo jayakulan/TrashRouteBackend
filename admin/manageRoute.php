@@ -45,55 +45,57 @@ try {
         throw new Exception("Failed to establish database connection");
     }
 
-    // First, let's check if the tables exist
-    $stmt = $pdo->query("SHOW TABLES LIKE 'registered_users'");
+    // First, let's check if the routes table exists
+    $stmt = $pdo->query("SHOW TABLES LIKE 'routes'");
     if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'registered_users' does not exist");
+        throw new Exception("Table 'routes' does not exist");
     }
 
-    $stmt = $pdo->query("SHOW TABLES LIKE 'customers'");
-    if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'customers' does not exist");
-    }
+    // Check if there are any routes
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM routes");
+    $routeCount = $stmt->fetch()['count'];
 
-    // Check if there are any customers or pending users
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM registered_users WHERE role = 'customer'");
-    $customerCount = $stmt->fetch()['count'];
-
-    if ($customerCount == 0) {
-        // Return empty array if no customers
+    if ($routeCount == 0) {
+        // Return empty array if no routes
         echo json_encode([
             'success' => true,
             'data' => [],
             'count' => 0,
-            'message' => 'No customers found in database'
+            'message' => 'No routes found in database'
         ]);
         exit();
     }
 
-    // Fetch customers using OOP method
-    $customers = Admin::getAllCustomers($pdo);
+    // Fetch all routes using Admin class method
+    $routes = Admin::getAllRoutes($pdo);
 
     // Format the response
-    $formattedCustomers = [];
-    foreach ($customers as $customer) {
-        $formattedCustomers[] = [
-            'id' => '#' . str_pad($customer['CustomerID'], 3, '0', STR_PAD_LEFT),
-            'name' => $customer['Name'],
-            'email' => $customer['Email'],
-            'phone' => $customer['Phone'] ?: 'N/A',
-            'location' => $customer['Location'] ?: 'N/A',
-            'status' => ucfirst($customer['Status']),
-            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate'])),
-            'role' => $customer['Role']
+    $formattedRoutes = [];
+    foreach ($routes as $route) {
+        // Convert acceptance status
+        $acceptanceStatus = $route['is_accepted'] == 1 ? 'Accepted' : 
+                          ($route['is_accepted'] == 0 ? 'Pending' : 'Rejected');
+        
+        // Convert disabled status
+        $disabledStatus = $route['is_disabled'] == 1 ? 'Disabled' : 'Enabled';
+        
+        $formattedRoutes[] = [
+            'route_id' => $route['route_id'],
+            'company_id' => $route['company_id'],
+            'company_name' => $route['company_name'] ?: 'Unknown Company',
+            'no_of_customers' => $route['no_of_customers'],
+            'is_accepted' => $acceptanceStatus,
+            'generated_at' => date('Y-m-d', strtotime($route['generated_at'])),
+            'is_disabled' => $disabledStatus,
+            'route_details' => $route['route_details'] ?: 'No details available'
         ];
     }
 
     // Return success response
     echo json_encode([
         'success' => true,
-        'data' => $formattedCustomers,
-        'count' => count($formattedCustomers)
+        'data' => $formattedRoutes,
+        'count' => count($formattedRoutes)
     ]);
 
 } catch (PDOException $e) {

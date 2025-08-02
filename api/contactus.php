@@ -24,11 +24,16 @@ require_once '../config/database.php';
 
 try {
     // Get JSON input
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_input = file_get_contents('php://input');
+    error_log("Contact form raw input: " . $raw_input);
+    
+    $input = json_decode($raw_input, true);
     
     if (!$input) {
         throw new Exception('Invalid JSON input');
     }
+    
+    error_log("Contact form parsed input: " . print_r($input, true));
     
     // Validate required fields
     $required_fields = ['name', 'email', 'subject', 'message'];
@@ -72,26 +77,30 @@ try {
         throw new Exception('Database connection failed');
     }
     
-    // Prepare SQL statement
-    $sql = "INSERT INTO contact_us (name, email, subject, message) VALUES (:name, :email, :subject, :message)";
+    // Prepare SQL statement with admin_id
+    $sql = "INSERT INTO contact_us (name, email, subject, message, admin_id) VALUES (:name, :email, :subject, :message, :admin_id)";
     $stmt = $db->prepare($sql);
     
     if (!$stmt) {
         throw new Exception('Failed to prepare statement');
     }
     
+    // Set admin_id to 12
+    $admin_id = 12;
+    
     // Bind parameters
     $stmt->bindParam(':name', $name);
     $stmt->bindParam(':email', $email);
     $stmt->bindParam(':subject', $subject);
     $stmt->bindParam(':message', $message);
+    $stmt->bindParam(':admin_id', $admin_id, PDO::PARAM_INT);
     
     // Execute the statement
     if ($stmt->execute()) {
         $contact_id = $db->lastInsertId();
         
         // Log the contact submission (optional)
-        error_log("Contact form submitted - ID: $contact_id, Name: $name, Email: $email, Subject: $subject");
+        error_log("Contact form submitted - ID: $contact_id, Name: $name, Email: $email, Subject: $subject, Admin ID: $admin_id");
         
         echo json_encode([
             'success' => true,

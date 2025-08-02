@@ -166,12 +166,24 @@ class SessionAuthMiddleware {
             return true;
         }
         
+        // Allow localhost referrers for development
+        if (strpos($referrer, 'localhost') !== false) {
+            return true;
+        }
+        
         // Allow if coming from login/signup pages
         $allowedPages = ['/login', '/signup', '/company-signup', '/'];
         foreach ($allowedPages as $page) {
             if (strpos($referrer, $page) !== false) {
                 return true;
             }
+        }
+        
+        // For API calls, be more permissive
+        if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false || 
+            strpos($_SERVER['REQUEST_URI'] ?? '', '/Company/') !== false ||
+            strpos($_SERVER['REQUEST_URI'] ?? '', '/Customer/') !== false) {
+            return true;
         }
         
         // Block external referrers

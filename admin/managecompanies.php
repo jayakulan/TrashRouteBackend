@@ -51,49 +51,45 @@ try {
         throw new Exception("Table 'registered_users' does not exist");
     }
 
-    $stmt = $pdo->query("SHOW TABLES LIKE 'customers'");
-    if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'customers' does not exist");
-    }
+    // Check if there are any companies
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM registered_users WHERE role = 'company'");
+    $companyCount = $stmt->fetch()['count'];
 
-    // Check if there are any customers or pending users
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM registered_users WHERE role = 'customer'");
-    $customerCount = $stmt->fetch()['count'];
-
-    if ($customerCount == 0) {
-        // Return empty array if no customers
+    if ($companyCount == 0) {
+        // Return empty array if no companies
         echo json_encode([
             'success' => true,
             'data' => [],
             'count' => 0,
-            'message' => 'No customers found in database'
+            'message' => 'No companies found in database'
         ]);
         exit();
     }
 
-    // Fetch customers using OOP method
-    $customers = Admin::getAllCustomers($pdo);
+    // Fetch companies using OOP method
+    $companies = Admin::getAllCompanies($pdo);
 
     // Format the response
-    $formattedCustomers = [];
-    foreach ($customers as $customer) {
-        $formattedCustomers[] = [
-            'id' => '#' . str_pad($customer['CustomerID'], 3, '0', STR_PAD_LEFT),
-            'name' => $customer['Name'],
-            'email' => $customer['Email'],
-            'phone' => $customer['Phone'] ?: 'N/A',
-            'location' => $customer['Location'] ?: 'N/A',
-            'status' => ucfirst($customer['Status']),
-            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate'])),
-            'role' => $customer['Role']
+    $formattedCompanies = [];
+    foreach ($companies as $company) {
+        $formattedCompanies[] = [
+            'id' => '#' . str_pad($company['CompanyID'], 3, '0', STR_PAD_LEFT),
+            'name' => $company['Name'],
+            'email' => $company['Email'],
+            'phone' => $company['Phone'] ?: 'N/A',
+            'location' => $company['Location'] ?: 'N/A',
+            'status' => ucfirst($company['Status']),
+            'comRegno' => $company['ComRegno'] ?: 'N/A',
+            'joinDate' => date('Y-m-d', strtotime($company['JoinDate'])),
+            'role' => $company['Role']
         ];
     }
 
     // Return success response
     echo json_encode([
         'success' => true,
-        'data' => $formattedCustomers,
-        'count' => count($formattedCustomers)
+        'data' => $formattedCompanies,
+        'count' => count($formattedCompanies)
     ]);
 
 } catch (PDOException $e) {
