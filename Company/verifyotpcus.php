@@ -11,6 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../utils/session_auth_middleware.php';
+
+// Check company authentication
+SessionAuthMiddleware::requireCompanyAuth();
 
 try {
     // Get POST data

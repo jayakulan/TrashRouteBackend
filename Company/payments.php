@@ -162,7 +162,24 @@ try {
     
     if (!$stmtUpdate->execute($requestIds)) {
         echo json_encode(['success' => false, 'message' => 'Failed to update pickup request status']);
-    exit;
+        exit;
+    }
+
+    // Update customer status to 'active' for all customers involved in accepted requests
+    $customerUpdateQuery = "
+        UPDATE registered_users 
+        SET disable_status = 'active' 
+        WHERE user_id IN (
+            SELECT DISTINCT pr.customer_id 
+            FROM pickup_requests pr 
+            WHERE pr.$requestIdColumn IN ($placeholders)
+        ) AND role = 'customer'
+    ";
+    $stmtCustomerUpdate = $db->prepare($customerUpdateQuery);
+    
+    if (!$stmtCustomerUpdate->execute($requestIds)) {
+        echo json_encode(['success' => false, 'message' => 'Failed to update customer status']);
+        exit;
     }
 
     // Fetch company name from registered_users using company_id

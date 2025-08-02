@@ -46,54 +46,52 @@ try {
     }
 
     // First, let's check if the tables exist
-    $stmt = $pdo->query("SHOW TABLES LIKE 'registered_users'");
+    $stmt = $pdo->query("SHOW TABLES LIKE 'pickup_requests'");
     if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'registered_users' does not exist");
+        throw new Exception("Table 'pickup_requests' does not exist");
     }
 
-    $stmt = $pdo->query("SHOW TABLES LIKE 'customers'");
-    if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'customers' does not exist");
-    }
+    // Check if there are any pickup requests
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM pickup_requests");
+    $requestCount = $stmt->fetch()['count'];
 
-    // Check if there are any customers or pending users
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM registered_users WHERE role = 'customer'");
-    $customerCount = $stmt->fetch()['count'];
-
-    if ($customerCount == 0) {
-        // Return empty array if no customers
+    if ($requestCount == 0) {
+        // Return empty array if no requests
         echo json_encode([
             'success' => true,
             'data' => [],
             'count' => 0,
-            'message' => 'No customers found in database'
+            'message' => 'No pickup requests found in database'
         ]);
         exit();
     }
 
-    // Fetch customers using OOP method
-    $customers = Admin::getAllCustomers($pdo);
+    // Fetch pickup requests using OOP method
+    $requests = Admin::getAllPickupRequests($pdo);
 
     // Format the response
-    $formattedCustomers = [];
-    foreach ($customers as $customer) {
-        $formattedCustomers[] = [
-            'id' => '#' . str_pad($customer['CustomerID'], 3, '0', STR_PAD_LEFT),
-            'name' => $customer['Name'],
-            'email' => $customer['Email'],
-            'phone' => $customer['Phone'] ?: 'N/A',
-            'location' => $customer['Location'] ?: 'N/A',
-            'status' => ucfirst($customer['Status']),
-            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate'])),
-            'role' => $customer['Role']
+    $formattedRequests = [];
+    foreach ($requests as $request) {
+        $formattedRequests[] = [
+            'id' => '#' . str_pad($request['RequestID'], 3, '0', STR_PAD_LEFT),
+            'customer' => $request['CustomerName'],
+            'location' => $request['Location'] ?: 'N/A',
+            'status' => $request['Status'],
+            'requestDate' => date('Y-m-d', strtotime($request['Timestamp'])),
+            'wasteType' => $request['WasteType'],
+            'amount' => $request['Quantity'] . ' kg',
+            'latitude' => $request['Latitude'],
+            'longitude' => $request['Longitude'],
+            'otp' => $request['OTP'] ?: 'N/A',
+            'otpVerified' => $request['OTPVerified'] ? 'Yes' : 'No'
         ];
     }
 
     // Return success response
     echo json_encode([
         'success' => true,
-        'data' => $formattedCustomers,
-        'count' => count($formattedCustomers)
+        'data' => $formattedRequests,
+        'count' => count($formattedRequests)
     ]);
 
 } catch (PDOException $e) {

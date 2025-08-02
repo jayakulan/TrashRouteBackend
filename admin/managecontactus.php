@@ -45,55 +45,50 @@ try {
         throw new Exception("Failed to establish database connection");
     }
 
-    // First, let's check if the tables exist
-    $stmt = $pdo->query("SHOW TABLES LIKE 'registered_users'");
+    // First, let's check if the contact_us table exists
+    $stmt = $pdo->query("SHOW TABLES LIKE 'contact_us'");
     if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'registered_users' does not exist");
+        throw new Exception("Table 'contact_us' does not exist");
     }
 
-    $stmt = $pdo->query("SHOW TABLES LIKE 'customers'");
-    if ($stmt->rowCount() == 0) {
-        throw new Exception("Table 'customers' does not exist");
-    }
+    // Check if there are any contact submissions
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM contact_us");
+    $contactCount = $stmt->fetch()['count'];
 
-    // Check if there are any customers or pending users
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM registered_users WHERE role = 'customer'");
-    $customerCount = $stmt->fetch()['count'];
-
-    if ($customerCount == 0) {
-        // Return empty array if no customers
+    if ($contactCount == 0) {
+        // Return empty array if no contact submissions
         echo json_encode([
             'success' => true,
             'data' => [],
             'count' => 0,
-            'message' => 'No customers found in database'
+            'message' => 'No contact submissions found in database'
         ]);
         exit();
     }
 
-    // Fetch customers using OOP method
-    $customers = Admin::getAllCustomers($pdo);
+    // Fetch all contact submissions using Admin class method
+    $contacts = Admin::getAllContactSubmissions($pdo);
 
     // Format the response
-    $formattedCustomers = [];
-    foreach ($customers as $customer) {
-        $formattedCustomers[] = [
-            'id' => '#' . str_pad($customer['CustomerID'], 3, '0', STR_PAD_LEFT),
-            'name' => $customer['Name'],
-            'email' => $customer['Email'],
-            'phone' => $customer['Phone'] ?: 'N/A',
-            'location' => $customer['Location'] ?: 'N/A',
-            'status' => ucfirst($customer['Status']),
-            'joinDate' => date('Y-m-d', strtotime($customer['JoinDate'])),
-            'role' => $customer['Role']
+    $formattedContacts = [];
+    foreach ($contacts as $contact) {
+        $formattedContacts[] = [
+            'id' => '#' . str_pad($contact['contact_id'], 3, '0', STR_PAD_LEFT),
+            'name' => $contact['name'],
+            'email' => $contact['email'],
+            'subject' => $contact['subject'],
+            'message' => $contact['message'],
+            'created_at' => date('Y-m-d H:i:s', strtotime($contact['created_at'])),
+            'admin_id' => $contact['admin_id'] ?: 'N/A',
+            'status' => 'New' // Default status, can be enhanced later
         ];
     }
 
     // Return success response
     echo json_encode([
         'success' => true,
-        'data' => $formattedCustomers,
-        'count' => count($formattedCustomers)
+        'data' => $formattedContacts,
+        'count' => count($formattedContacts)
     ]);
 
 } catch (PDOException $e) {
