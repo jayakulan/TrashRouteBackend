@@ -182,7 +182,13 @@ class SessionAuthMiddleware {
         // For API calls, be more permissive
         if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false || 
             strpos($_SERVER['REQUEST_URI'] ?? '', '/Company/') !== false ||
-            strpos($_SERVER['REQUEST_URI'] ?? '', '/Customer/') !== false) {
+            strpos($_SERVER['REQUEST_URI'] ?? '', '/Customer/') !== false ||
+            strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/') !== false) {
+            return true;
+        }
+        
+        // For development, allow all localhost requests
+        if (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false) {
             return true;
         }
         
@@ -369,8 +375,12 @@ class SessionAuthMiddleware {
      * @return array|void
      */
     public static function requireCustomerAuth($returnJson = true) {
-        // Validate referrer to prevent direct URL access
-        if (!self::validateReferrer()) {
+        // Skip referrer validation for API calls (Customer endpoints)
+        $isApiCall = strpos($_SERVER['REQUEST_URI'] ?? '', '/Customer/') !== false || 
+                    strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
+        
+        // Only validate referrer for non-API calls
+        if (!$isApiCall && !self::validateReferrer()) {
             if ($returnJson) {
                 http_response_code(403);
                 echo json_encode([
@@ -385,7 +395,26 @@ class SessionAuthMiddleware {
             }
         }
         
-        // Check session first
+        // Prefer JWT token when present to avoid stale/mismatched PHP sessions
+        require_once 'helpers.php';
+        $token = Helpers::getBearerToken();
+        if ($token) {
+            $payload = Helpers::verifyToken($token);
+            if ($payload && ($payload['role'] ?? null) === 'customer') {
+                // Sync PHP session with token to keep server state consistent
+                $_SESSION['user_id'] = $payload['user_id'];
+                $_SESSION['role'] = $payload['role'];
+                $_SESSION['login_time'] = time();
+                return [
+                    'user_id' => $payload['user_id'],
+                    'role' => $payload['role'],
+                    'email' => null,
+                    'name' => null
+                ];
+            }
+        }
+
+        // Fallback to session if no valid token provided
         if (isset($_SESSION['user_id']) && 
             isset($_SESSION['role']) && 
             $_SESSION['role'] === 'customer') {
@@ -395,26 +424,6 @@ class SessionAuthMiddleware {
                 'email' => $_SESSION['email'] ?? null,
                 'name' => $_SESSION['name'] ?? null
             ];
-        }
-        
-        // Fallback to JWT token check
-        require_once 'helpers.php';
-        $token = Helpers::getBearerToken();
-        if ($token) {
-            $payload = Helpers::verifyToken($token);
-            if ($payload && $payload['role'] === 'customer') {
-                // Set session data from token
-                $_SESSION['user_id'] = $payload['user_id'];
-                $_SESSION['role'] = $payload['role'];
-                $_SESSION['login_time'] = time();
-                
-                return [
-                    'user_id' => $payload['user_id'],
-                    'role' => $payload['role'],
-                    'email' => null,
-                    'name' => null
-                ];
-            }
         }
         
         // If neither session nor JWT token is valid
