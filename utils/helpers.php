@@ -200,17 +200,18 @@ class Helpers {
         return str_pad(rand(0, pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
     }
     
-    // Create notification
-    public static function createNotification($user_id, $message, $request_id = null, $company_id = null) {
+    // Create notification (supports optional request/company/customer ids)
+    public static function createNotification($user_id, $message, $request_id = null, $company_id = null, $customer_id = null) {
         global $db;
         
-        $query = "INSERT INTO notifications (user_id, request_id, company_id, message) 
-                  VALUES (:user_id, :request_id, :company_id, :message)";
+        $query = "INSERT INTO notifications (user_id, request_id, company_id, customer_id, message)
+                  VALUES (:user_id, :request_id, :company_id, :customer_id, :message)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':user_id', $user_id);
         $stmt->bindParam(':request_id', $request_id);
         $stmt->bindParam(':company_id', $company_id);
+        $stmt->bindParam(':customer_id', $customer_id);
         $stmt->bindParam(':message', $message);
         
         return $stmt->execute();

@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../utils/session_auth_middleware.php';
+require_once '../utils/helpers.php';
 
 // Check company authentication
 SessionAuthMiddleware::requireCompanyAuth();
@@ -86,6 +87,23 @@ try {
         $updateStmt->bindParam(':request_id', $request_id, PDO::PARAM_INT);
         
         if ($updateStmt->execute()) {
+            // Make DB available to helper
+            $GLOBALS['db'] = $db;
+            // Create notifications for completion
+            $customer_id_n = (int)$pickupRequest['customer_id'];
+            $msgCustomer = "Your pickup request #{$request_id} has been marked as completed.";
+            Helpers::createNotification($customer_id_n, $msgCustomer, (int)$request_id, null, $customer_id_n);
+
+            // Company who accepted this route (if any) - find via mapping
+            $stmtCompany = $db->prepare("SELECT r.company_id FROM route_request_mapping rrm INNER JOIN routes r ON rrm.route_id = r.route_id WHERE rrm.request_id = :request_id LIMIT 1");
+            $stmtCompany->bindParam(':request_id', $request_id, PDO::PARAM_INT);
+            $stmtCompany->execute();
+            $companyRow = $stmtCompany->fetch(PDO::FETCH_ASSOC);
+            if ($companyRow && isset($companyRow['company_id'])) {
+                $company_id_n = (int)$companyRow['company_id'];
+                $msgCompany = "Pickup request #{$request_id} has been completed.";
+                Helpers::createNotification($company_id_n, $msgCompany, (int)$request_id, $company_id_n, $customer_id_n);
+            }
             // Get customer details for response
             $customerQuery = "SELECT ru.name as customer_name, ru.contact_number, ru.address 
                              FROM customers c 

@@ -85,6 +85,8 @@ try {
     // Get database connection
     $database = new Database();
     $db = $database->getConnection();
+    // Make DB connection available to helper methods that expect a global
+    $GLOBALS['db'] = $db;
     
     if (!$db) {
         throw new Exception('Database connection not available. Please check your database configuration.');
@@ -133,6 +135,10 @@ try {
             }
             
             $requestId = $db->lastInsertId();
+
+            // Create a notification for the customer about the scheduled pickup
+            $message = "Pickup scheduled: {$type} (qty: {$quantity}). Request #{$requestId}.";
+            Helpers::createNotification((int)$customerId, $message, (int)$requestId, null, (int)$customerId);
             
             $insertedRequests[] = [
                 'request_id' => $requestId,

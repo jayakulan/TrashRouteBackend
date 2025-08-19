@@ -13,6 +13,7 @@ header('Pragma: no-cache');
 
 require_once '../config/database.php';
 require_once '../utils/session_auth_middleware.php';
+require_once '../utils/helpers.php';
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -39,6 +40,8 @@ try {
 try {
     $database = new Database();
     $db = $database->getConnection();
+    // Make DB connection available to helper methods that expect a global
+    $GLOBALS['db'] = $db;
     if (!$db) {
         echo json_encode(['success' => false, 'message' => 'Database connection failed']);
         exit;
@@ -228,6 +231,19 @@ try {
             */
         }
     }
+
+    // Create notifications:
+    // 1) Per-customer: pickup accepted by company
+    foreach ($pickupRequests as $reqRow) {
+        $customer_id_n = (int)$reqRow['customer_id'];
+        $request_id_n = (int)$reqRow[$requestIdColumn];
+        $msg = "Your pickup request #{$request_id_n} has been accepted by {$company_name}.";
+        Helpers::createNotification($customer_id_n, $msg, $request_id_n, (int)$company_id, $customer_id_n);
+    }
+
+    // 2) Company: payment successful / route activated
+    $companyMsg = "Payment successful. Route #{$route_id} for {$waste_type} activated.";
+    Helpers::createNotification((int)$company_id, $companyMsg, null, (int)$company_id, null);
 
     echo json_encode([
         'success' => true, 
