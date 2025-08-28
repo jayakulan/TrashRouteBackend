@@ -241,8 +241,8 @@ try {
         Helpers::createNotification($customer_id_n, $msg, $request_id_n, (int)$company_id, $customer_id_n);
     }
 
-    // 2) Company: payment successful / route activated
-    $companyMsg = "Payment successful. Route #{$route_id} for {$waste_type} activated.";
+    // 2) Company: payment successful / route activated (include route details)
+    $companyMsg = "Payment successful. Route #{$route_id} for {$waste_type} activated. Customers: {$totalCustomers}, Total Qty: {$totalQuantity} kg.";
     Helpers::createNotification((int)$company_id, $companyMsg, null, (int)$company_id, null);
 
     echo json_encode([
