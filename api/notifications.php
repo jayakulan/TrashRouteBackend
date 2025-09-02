@@ -32,8 +32,22 @@ try {
         $seen = isset($_GET['seen']) ? $_GET['seen'] : null; // '0' | '1' | null
         $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 50;
 
-        $sql = "SELECT notification_id, user_id, request_id, company_id, customer_id, message, seen, created_at
-                FROM notifications WHERE user_id = :user_id";
+        $sql = "SELECT n.notification_id,
+                       n.user_id,
+                       n.request_id,
+                       n.company_id,
+                       n.customer_id,
+                       n.message,
+                       n.seen,
+                       n.created_at,
+                       pr.waste_type AS request_waste_type,
+                       pr.quantity AS request_quantity,
+                       pr.status AS request_status,
+                       pr.otp AS request_otp,
+                       pr.timestamp AS request_timestamp
+                FROM notifications n
+                LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
+                WHERE n.user_id = :user_id";
         $params = [':user_id' => $user_id];
         if ($seen === '0' || $seen === '1') {
             $sql .= " AND seen = :seen";
