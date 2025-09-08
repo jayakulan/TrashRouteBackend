@@ -329,15 +329,23 @@ try {
     // Generate filename
     $filename = 'TrashRoute_Monthly_Report_' . date('Y-m', strtotime('first day of last month')) . '.pdf';
 
+    // Generate PDF bytes once to avoid duplicate rendering and length mismatches
+    $pdfOutput = $dompdf->output();
+
+    // Ensure no stray output corrupts the PDF response
+    if (function_exists('ob_get_length') && ob_get_length()) {
+        ob_clean();
+    }
+
     // Set proper headers for PDF download
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Content-Length: ' . strlen($dompdf->output()));
+    header('Content-Length: ' . strlen($pdfOutput));
     header('Cache-Control: private, max-age=0, must-revalidate');
     header('Pragma: public');
 
     // Output the PDF
-    echo $dompdf->output();
+    echo $pdfOutput;
 
 } catch (Exception $e) {
     error_log("Generate Report Error: " . $e->getMessage());
