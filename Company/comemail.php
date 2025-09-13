@@ -15,6 +15,7 @@ require_once __DIR__ . '/../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email_config.php';
 
 // Get POST data: customer_email, company_name
 $customer_email = $_POST['customer_email'] ?? null;
@@ -42,17 +43,11 @@ $body = "Dear Customer,<br><br>"
 
 $mail = new PHPMailer(true);
 try {
-    //Server settings
-    $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com'; // Set your SMTP server
-    $mail->SMTPAuth   = true;
-    $mail->Username   = 'trashroute.wastemanagement@gmail.com'; // Your SMTP username
-    $mail->Password   = 'axlgbzwognxntkrl'; // Your SMTP password
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
-
-    //Recipients
-    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute');
+    // Configure SMTP using the new email config
+    EmailConfig::configurePHPMailer($mail);
+    
+    // Recipients
+    $mail->setFrom(EmailConfig::EMAIL_USERNAME, EmailConfig::EMAIL_FROM_NAME);
     $mail->addAddress($customer_email);
 
     // Content
@@ -61,9 +56,10 @@ try {
     $mail->Body    = $body;
 
     $mail->send();
-    // Do not echo anything when included
-    // Optionally, set a variable or log success
+    // Email sent successfully - log success
+    error_log("Collection notification email sent successfully to: $customer_email");
 } catch (Exception $e) {
-    // Do not echo or set response code when included
-    // Optionally, log error
+    // Enhanced error logging
+    error_log("SMTP Error in comemail.php: " . $e->getMessage());
+    error_log("SMTP Debug Info: " . $mail->ErrorInfo);
 } 

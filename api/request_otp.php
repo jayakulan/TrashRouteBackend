@@ -4,6 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email_config.php';
 require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
@@ -88,20 +89,27 @@ try {
     $stmt->execute([$user_id, $otp, $expiration_time]);
     // Send OTP email
     $mail = new PHPMailer(true);
-    $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'trashroute.wastemanagement@gmail.com';
-    $mail->Password = 'axlgbzwognxntkrl';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
-    $mail->addAddress($email, $name);
-    $mail->isHTML(true);
-    $mail->Subject = 'Your OTP Verification Code';
-    $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 10 hours.</p>";
-    $mail->send();
-    Helpers::sendResponse(null, 200, 'OTP sent successfully');
+    try {
+        // Configure SMTP using the new email config
+        EmailConfig::configurePHPMailer($mail);
+        
+        // Set sender and recipient
+        $mail->setFrom(EmailConfig::EMAIL_USERNAME, EmailConfig::EMAIL_FROM_NAME . ' OTP');
+        $mail->addAddress($email, $name);
+        
+        // Email content
+        $mail->isHTML(true);
+        $mail->Subject = 'Your OTP Verification Code';
+        $mail->Body = "<p>Hello <strong>$name</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 10 hours.</p>";
+        
+        $mail->send();
+        Helpers::sendResponse(null, 200, 'OTP sent successfully');
+    } catch (Exception $e) {
+        // Enhanced error logging
+        error_log("SMTP Error in request_otp.php: " . $e->getMessage());
+        error_log("SMTP Debug Info: " . $mail->ErrorInfo);
+        Helpers::sendError('Failed to send OTP email. Please check your email configuration.');
+    }
 } catch (Exception $e) {
     Helpers::sendError('Failed: ' . $e->getMessage());
 }

@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email_config.php';
 require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../utils/company_validator.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
@@ -101,14 +102,11 @@ try {
     
     // Send OTP email
     $mail = new PHPMailer(true);
-    $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'trashroute.wastemanagement@gmail.com';
-    $mail->Password = 'axlgbzwognxntkrl';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
+    // Configure SMTP using the new email config
+    EmailConfig::configurePHPMailer($mail);
+    
+    // Set sender
+    $mail->setFrom(EmailConfig::EMAIL_USERNAME, EmailConfig::EMAIL_FROM_NAME . ' OTP');
     $mail->addAddress($sanitized_data['email'], $sanitized_data['name']);
     $mail->isHTML(true);
     $mail->Subject = 'Your OTP Verification Code';

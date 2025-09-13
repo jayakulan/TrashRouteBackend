@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email_config.php';
 require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../PHPMailer/src/SMTP.php';
@@ -74,22 +75,25 @@ try {
         // Send OTP email
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
-            $mail->SMTPAuth = true;
-            $mail->Username = 'trashroute.wastemanagement@gmail.com';
-            $mail->Password = 'axlgbzwognxntkrl';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
-            $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute Password Reset');
+            // Configure SMTP using the new email config
+            EmailConfig::configurePHPMailer($mail);
+            
+            // Set sender and recipient
+            $mail->setFrom(EmailConfig::EMAIL_USERNAME, EmailConfig::EMAIL_FROM_NAME . ' Password Reset');
             $mail->addAddress($email);
+            
+            // Email content
             $mail->isHTML(true);
             $mail->Subject = 'Your OTP for Password Reset';
             $mail->Body = "<p>Your OTP for password reset is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 1 hour.</p>";
+            
             $mail->send();
             Helpers::sendResponse(null, 200, 'OTP sent to your email');
         } catch (Exception $e) {
-            Helpers::sendError('Failed to send OTP email: ' . $mail->ErrorInfo);
+            // Enhanced error logging
+            error_log("SMTP Error in forgetpassword.php: " . $e->getMessage());
+            error_log("SMTP Debug Info: " . $mail->ErrorInfo);
+            Helpers::sendError('Failed to send OTP email. Please check your email configuration.');
         }
     } elseif ($action === 'verify_otp') {
         $otp_code = isset($input['otp']) ? Helpers::sanitize($input['otp']) : '';

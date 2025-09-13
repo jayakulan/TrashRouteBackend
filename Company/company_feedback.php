@@ -90,6 +90,74 @@ try {
     $stmt->bindParam(':comment', $comment);
 
     if ($stmt->execute()) {
+        // Check if this completion means the entire route is now complete
+        if ($pickup_completed) {
+            // Get route_id for this request
+            $stmt = $db->prepare("
+                SELECT rrm.route_id, r.company_id, r.is_disabled
+                FROM route_request_mapping rrm
+                JOIN routes r ON rrm.route_id = r.route_id
+                WHERE rrm.request_id = :request_id
+            ");
+            $stmt->bindParam(':request_id', $request_id);
+            $stmt->execute();
+            $route_info = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($route_info && !$route_info['is_disabled']) {
+                // Check if all requests in this route are now completed
+                $stmt = $db->prepare("
+                    SELECT COUNT(*) as total_requests,
+                           SUM(CASE WHEN cf.pickup_completed = 1 THEN 1 ELSE 0 END) as completed_requests
+                    FROM route_request_mapping rrm
+                    LEFT JOIN company_feedback cf ON rrm.request_id = cf.request_id AND cf.company_id = :company_id
+                    WHERE rrm.route_id = :route_id
+                ");
+                $stmt->bindParam(':route_id', $route_info['route_id']);
+                $stmt->bindParam(':company_id', $company_id);
+                $stmt->execute();
+                $completion_status = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // If all requests are completed, dismiss route notifications
+                if ($completion_status['total_requests'] > 0 && 
+                    $completion_status['total_requests'] == $completion_status['completed_requests']) {
+                    
+                    // Mark route as completed
+                    $stmt = $db->prepare("UPDATE routes SET is_disabled = 1 WHERE route_id = :route_id");
+                    $stmt->bindParam(':route_id', $route_info['route_id']);
+                    $stmt->execute();
+                    
+                    // Dismiss all notifications for this route
+                    $stmt = $db->prepare("
+                        UPDATE notifications 
+                        SET seen = 1, dismissed_at = NOW()
+                        WHERE company_id = :company_id 
+                        AND request_id IN (
+                            SELECT request_id 
+                            FROM route_request_mapping 
+                            WHERE route_id = :route_id
+                        )
+                        AND dismissed_at IS NULL
+                    ");
+                    $stmt->bindParam(':company_id', $company_id);
+                    $stmt->bindParam(':route_id', $route_info['route_id']);
+                    $stmt->execute();
+                    
+                    // Update pickup request statuses to 'Completed'
+                    $stmt = $db->prepare("
+                        UPDATE pickup_requests 
+                        SET status = 'Completed' 
+                        WHERE request_id IN (
+                            SELECT request_id 
+                            FROM route_request_mapping 
+                            WHERE route_id = :route_id
+                        )
+                    ");
+                    $stmt->bindParam(':route_id', $route_info['route_id']);
+                    $stmt->execute();
+                }
+            }
+        }
+        
         echo json_encode(['success' => true, 'message' => 'Feedback submitted successfully']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to submit feedback']);

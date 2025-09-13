@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/helpers.php';
+require_once __DIR__ . '/../utils/company_validator.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Customer.php';
 require_once __DIR__ . '/../classes/Company.php';
@@ -37,13 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
-$name = isset($input['name']) ? Helpers::sanitize($input['name']) : '';
-$contact_number = isset($input['contact_number']) ? Helpers::sanitize($input['contact_number']) : '';
-$address = isset($input['address']) ? Helpers::sanitize($input['address']) : '';
 
-if (!$user_id || !$name || !$contact_number || !$address) {
-    Helpers::sendError('All fields are required');
+if (!$input) {
+    Helpers::sendError('Invalid JSON input');
+}
+
+$user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
+
+if (!$user_id) {
+    Helpers::sendError('User ID is required');
 }
 
 $database = new Database();
@@ -53,6 +56,22 @@ if (!$db) {
 }
 
 try {
+    // Validate input data
+    $validation_errors = CompanyValidator::validateEditProfileData($input, $db, $user_id);
+    
+    if (!empty($validation_errors)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validation_errors
+        ]);
+        exit();
+    }
+    
+    // Sanitize data
+    $sanitized_data = CompanyValidator::sanitizeEditProfileData($input);
+    
     // Get current user email from database
     $query = "SELECT email FROM registered_users WHERE user_id = :user_id";
     $stmt = $db->prepare($query);
@@ -64,8 +83,8 @@ try {
         Helpers::sendError('User not found');
     }
 
-    $company = new Company($user_id, $user['email'], $name, null);
-    $company->updateProfile($db, $user_id, $name, $user['email'], $contact_number, $address);
+    $company = new Company($user_id, $user['email'], $sanitized_data['name'], null);
+    $company->updateProfile($db, $user_id, $sanitized_data['name'], $user['email'], $sanitized_data['contact_number'], $sanitized_data['address']);
     Helpers::sendResponse(null, 200, 'Profile updated successfully');
 } catch (Exception $e) {
     Helpers::sendError('Profile update failed: ' . $e->getMessage(), 500);

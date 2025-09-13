@@ -6,6 +6,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/email_config.php';
 require_once __DIR__ . '/../utils/helpers.php';
 require_once __DIR__ . '/../utils/customer_validator.php';
 require_once __DIR__ . '/../PHPMailer/src/PHPMailer.php';
@@ -45,10 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Read JSON input
-$input = json_decode(file_get_contents('php://input'), true);
+$raw_input = file_get_contents('php://input');
+$input = json_decode($raw_input, true);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+    Helpers::sendError('Invalid JSON input: ' . json_last_error_msg());
+}
 
 if (!$input) {
-    Helpers::sendError('Invalid JSON input');
+    Helpers::sendError('No input data received');
 }
 
 try {
@@ -67,7 +73,13 @@ try {
         foreach ($validation_result['errors'] as $field => $errors) {
             $error_messages[$field] = $errors[0]; // Take the first error for each field
         }
-        Helpers::sendError('Validation failed', 400, $error_messages);
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $error_messages
+        ]);
+        exit();
     }
     
     $sanitized_data = $validation_result['sanitized_data'];
@@ -97,21 +109,27 @@ try {
     
     // Send OTP email
     $mail = new PHPMailer(true);
-    $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'trashroute.wastemanagement@gmail.com';
-    $mail->Password = 'axlgbzwognxntkrl';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
-    $mail->setFrom('trashroute.wastemanagement@gmail.com', 'TrashRoute OTP');
-    $mail->addAddress($sanitized_data['email'], $sanitized_data['name']);
-    $mail->isHTML(true);
-    $mail->Subject = 'Your OTP Verification Code';
-    $mail->Body = "<p>Hello <strong>{$sanitized_data['name']}</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 10 hours.</p>";
-    $mail->send();
-    
-    Helpers::sendResponse(null, 200, 'OTP sent successfully');
+    try {
+        // Configure SMTP using the new email config
+        EmailConfig::configurePHPMailer($mail);
+        
+        // Set sender and recipient
+        $mail->setFrom(EmailConfig::EMAIL_USERNAME, EmailConfig::EMAIL_FROM_NAME . ' OTP');
+        $mail->addAddress($sanitized_data['email'], $sanitized_data['name']);
+        
+        // Email content
+        $mail->isHTML(true);
+        $mail->Subject = 'Your OTP Verification Code';
+        $mail->Body = "<p>Hello <strong>{$sanitized_data['name']}</strong>,</p><p>Your OTP code is: <strong style='color:green;'>$otp</strong></p><p>This code will expire in 10 hours.</p>";
+        
+        $mail->send();
+        Helpers::sendResponse(null, 200, 'OTP sent successfully');
+    } catch (Exception $e) {
+        // Enhanced error logging
+        error_log("SMTP Error in request_otp_customer_validated.php: " . $e->getMessage());
+        error_log("SMTP Debug Info: " . $mail->ErrorInfo);
+        Helpers::sendError('Failed to send OTP email. Please check your email configuration.');
+    }
     
 } catch (Exception $e) {
     Helpers::sendError('Failed: ' . $e->getMessage());

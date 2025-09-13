@@ -22,7 +22,7 @@ class CustomerValidator {
         'contact_number' => [
             'required' => true,
             'exact_length' => 10,
-            'pattern' => '/^\d{10}$/'
+            'pattern' => '/^0[27]\d{8}$/'
         ],
         'address' => [
             'required' => true,
@@ -53,7 +53,7 @@ class CustomerValidator {
         'contact_number' => [
             'required' => 'Phone number is required',
             'exact_length' => 'Phone number must be exactly 10 digits',
-            'pattern' => 'Phone number must contain only digits'
+            'pattern' => 'Phone number must start with 07 or 02 and be exactly 10 digits'
         ],
         'address' => [
             'required' => 'Address is required',
@@ -173,6 +173,13 @@ class CustomerValidator {
      */
     private static function sanitizePhoneNumber($phone) {
         $phone = preg_replace('/[^0-9]/', '', $phone); // Remove all non-digits
+        
+        // Ensure it starts with 0 and is 10 digits
+        if (strlen($phone) === 10 && preg_match('/^0[27]\d{8}$/', $phone)) {
+            return $phone;
+        }
+        
+        // If it doesn't match the pattern, return as is for validation to catch
         return $phone;
     }
     
@@ -260,6 +267,154 @@ class CustomerValidator {
             'sanitized_data' => $sanitized_data,
             'errors' => $validation_errors,
             'is_valid' => empty($validation_errors)
+        ];
+    }
+
+    /**
+     * Validate customer edit profile data
+     */
+    public static function validateEditProfileData($input, $db, $user_id) {
+        $errors = [];
+        
+        // Define edit profile rules (less strict than registration)
+        $edit_rules = [
+            'name' => [
+                'required' => true,
+                'min_length' => 2,
+                'max_length' => 50,
+                'pattern' => '/^[a-zA-Z\s]+$/'
+            ],
+            'phone' => [
+                'required' => true,
+                'exact_length' => 10,
+                'pattern' => '/^0[27]\d{8}$/'
+            ],
+            'address' => [
+                'required' => true,
+                'min_length' => 10,
+                'max_length' => 200
+            ],
+            'currentPassword' => [
+                'required' => false,
+                'min_length' => 1
+            ],
+            'newPassword' => [
+                'required' => false,
+                'min_length' => 8,
+                'max_length' => 128,
+                'pattern' => '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+            ],
+            'confirmPassword' => [
+                'required' => false,
+                'min_length' => 8
+            ]
+        ];
+        
+        // Validate each field
+        foreach ($edit_rules as $field => $rules) {
+            $value = $input[$field] ?? '';
+            $field_errors = self::validateEditField($field, $value, $rules);
+            if (!empty($field_errors)) {
+                $errors[$field] = $field_errors;
+            }
+        }
+        
+        // Special validation for password change
+        if (!empty($input['newPassword']) || !empty($input['confirmPassword'])) {
+            if (empty($input['currentPassword'])) {
+                $errors['currentPassword'] = ['Current password is required to change password'];
+            }
+            if (empty($input['newPassword'])) {
+                $errors['newPassword'] = ['New password is required'];
+            }
+            if (empty($input['confirmPassword'])) {
+                $errors['confirmPassword'] = ['Please confirm your new password'];
+            }
+            if (!empty($input['newPassword']) && !empty($input['confirmPassword']) && $input['newPassword'] !== $input['confirmPassword']) {
+                $errors['confirmPassword'] = ['Passwords do not match'];
+            }
+        }
+        
+        // Validate current password if provided
+        if (!empty($input['currentPassword'])) {
+            $password_valid = self::validateCurrentPassword($db, $user_id, $input['currentPassword']);
+            if (!$password_valid) {
+                $errors['currentPassword'] = ['Current password is incorrect'];
+            }
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * Validate individual edit field
+     */
+    private static function validateEditField($field, $value, $rules) {
+        $errors = [];
+        
+        // Required check
+        if ($rules['required'] && empty($value)) {
+            $errors[] = self::$error_messages[$field]['required'] ?? ucfirst($field) . ' is required';
+            return $errors;
+        }
+        
+        // Skip other validations if field is empty and not required
+        if (empty($value) && !$rules['required']) {
+            return $errors;
+        }
+        
+        // Length validations
+        if (isset($rules['min_length']) && strlen($value) < $rules['min_length']) {
+            $errors[] = self::$error_messages[$field]['min_length'] ?? ucfirst($field) . ' must be at least ' . $rules['min_length'] . ' characters long';
+        }
+        
+        if (isset($rules['max_length']) && strlen($value) > $rules['max_length']) {
+            $errors[] = self::$error_messages[$field]['max_length'] ?? ucfirst($field) . ' cannot exceed ' . $rules['max_length'] . ' characters';
+        }
+        
+        if (isset($rules['exact_length']) && strlen($value) !== $rules['exact_length']) {
+            $errors[] = self::$error_messages[$field]['exact_length'] ?? ucfirst($field) . ' must be exactly ' . $rules['exact_length'] . ' characters long';
+        }
+        
+        // Pattern validation
+        if (isset($rules['pattern']) && !preg_match($rules['pattern'], $value)) {
+            $errors[] = self::$error_messages[$field]['pattern'] ?? ucfirst($field) . ' format is invalid';
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * Validate current password
+     */
+    private static function validateCurrentPassword($db, $user_id, $current_password) {
+        try {
+            $query = "SELECT password_hash FROM registered_users WHERE user_id = :user_id";
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':user_id', $user_id);
+            $stmt->execute();
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                return password_verify($current_password, $user['password_hash']);
+            }
+            return false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Sanitize edit profile data
+     */
+    public static function sanitizeEditProfileData($input) {
+        return [
+            'name' => trim($input['name'] ?? ''),
+            'phone' => trim($input['phone'] ?? ''),
+            'address' => trim($input['address'] ?? ''),
+            'currentPassword' => $input['currentPassword'] ?? '',
+            'newPassword' => $input['newPassword'] ?? '',
+            'confirmPassword' => $input['confirmPassword'] ?? ''
         ];
     }
 }

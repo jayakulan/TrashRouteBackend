@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../utils/helpers.php';
+require_once __DIR__ . '/../utils/customer_validator.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Customer.php';
 require_once __DIR__ . '/../classes/Company.php';
@@ -37,16 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
-$name = isset($input['name']) ? Helpers::sanitize($input['name']) : '';
-$phone = isset($input['phone']) ? Helpers::sanitize($input['phone']) : '';
-$address = isset($input['address']) ? Helpers::sanitize($input['address']) : '';
-$currentPassword = $input['currentPassword'] ?? '';
-$newPassword = $input['newPassword'] ?? '';
-$confirmPassword = $input['confirmPassword'] ?? '';
 
-if (!$user_id || !$name || !$phone || !$address) {
-    Helpers::sendError('All fields are required');
+if (!$input) {
+    Helpers::sendError('Invalid JSON input');
+}
+
+$user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
+
+if (!$user_id) {
+    Helpers::sendError('User ID is required');
 }
 
 $database = new Database();
@@ -56,6 +56,22 @@ if (!$db) {
 }
 
 try {
+    // Validate input data
+    $validation_errors = CustomerValidator::validateEditProfileData($input, $db, $user_id);
+    
+    if (!empty($validation_errors)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validation_errors
+        ]);
+        exit();
+    }
+    
+    // Sanitize data
+    $sanitized_data = CustomerValidator::sanitizeEditProfileData($input);
+    
     // Get current user email from database by joining with registered_users
     $query = "SELECT ru.email, ru.name, ru.contact_number, ru.address 
               FROM customers c 
@@ -70,8 +86,18 @@ try {
         Helpers::sendError('User not found');
     }
 
-    $customer = new Customer($user_id, $user['email'], $name, $address);
-    $updatedUser = $customer->updateProfile($db, $user_id, $name, $user['email'], $phone, $address, $currentPassword, $newPassword, $confirmPassword);
+    $customer = new Customer($user_id, $user['email'], $sanitized_data['name'], $sanitized_data['address']);
+    $updatedUser = $customer->updateProfile(
+        $db, 
+        $user_id, 
+        $sanitized_data['name'], 
+        $user['email'], 
+        $sanitized_data['phone'], 
+        $sanitized_data['address'], 
+        $sanitized_data['currentPassword'], 
+        $sanitized_data['newPassword'], 
+        $sanitized_data['confirmPassword']
+    );
     Helpers::sendResponse($updatedUser, 200, 'Profile updated successfully');
     
 } catch (Exception $e) {
