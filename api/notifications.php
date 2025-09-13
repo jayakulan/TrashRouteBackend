@@ -39,6 +39,7 @@ try {
                        n.customer_id,
                        n.message,
                        n.seen,
+                       n.dismissed_at,
                        n.created_at,
                        pr.waste_type AS request_waste_type,
                        pr.quantity AS request_quantity,
@@ -47,7 +48,7 @@ try {
                        pr.timestamp AS request_timestamp
                 FROM notifications n
                 LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
-                WHERE n.user_id = :user_id";
+                WHERE n.user_id = :user_id AND n.dismissed_at IS NULL";
         $params = [':user_id' => $user_id];
         if ($seen === '0' || $seen === '1') {
             $sql .= " AND seen = :seen";
@@ -183,9 +184,9 @@ try {
     }
 
     $where = implode(' AND ', $conditions);
-    $sql = "SELECT notification_id, user_id, request_id, company_id, customer_id, message, seen, created_at
+    $sql = "SELECT notification_id, user_id, request_id, company_id, customer_id, message, seen, dismissed_at, created_at
             FROM notifications
-            WHERE $where
+            WHERE $where AND dismissed_at IS NULL
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset";
 
