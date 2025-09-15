@@ -145,6 +145,18 @@ try {
         $stmt->bindParam(':route_id', $route_id);
         $stmt->execute();
         
+        // 6b. Dismiss "New Route Activated" notifications for this route
+        $stmt = $db->prepare("
+            UPDATE notifications 
+            SET seen = 1, dismissed_at = NOW()
+            WHERE company_id = :company_id 
+            AND message LIKE CONCAT('%Route #', :route_id, '%')
+            AND seen = 0
+        ");
+        $stmt->bindParam(':company_id', $company_id);
+        $stmt->bindParam(':route_id', $route_id);
+        $stmt->execute();
+        
         // 7. Update all pickup request statuses to 'Completed'
         $stmt = $db->prepare("
             UPDATE pickup_requests 

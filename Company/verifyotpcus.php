@@ -94,17 +94,7 @@ try {
             $msgCustomer = "Your pickup request #{$request_id} has been marked as completed.";
             Helpers::createNotification($customer_id_n, $msgCustomer, (int)$request_id, null, $customer_id_n);
 
-            // Company who accepted this route (if any) - find via mapping
-            $stmtCompany = $db->prepare("SELECT r.company_id FROM route_request_mapping rrm INNER JOIN routes r ON rrm.route_id = r.route_id WHERE rrm.request_id = :request_id LIMIT 1");
-            $stmtCompany->bindParam(':request_id', $request_id, PDO::PARAM_INT);
-            $stmtCompany->execute();
-            $companyRow = $stmtCompany->fetch(PDO::FETCH_ASSOC);
-            if ($companyRow && isset($companyRow['company_id'])) {
-                $company_id_n = (int)$companyRow['company_id'];
-                $msgCompany = "Pickup request #{$request_id} has been completed.";
-                Helpers::createNotification($company_id_n, $msgCompany, (int)$request_id, $company_id_n, $customer_id_n);
-            }
-            // Get customer details for response
+            // Get customer details first
             $customerQuery = "SELECT ru.name as customer_name, ru.contact_number, ru.address 
                              FROM customers c 
                              INNER JOIN registered_users ru ON c.customer_id = ru.user_id 
@@ -114,6 +104,18 @@ try {
             $customerStmt->bindParam(':customer_id', $pickupRequest['customer_id'], PDO::PARAM_INT);
             $customerStmt->execute();
             $customer = $customerStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Company who accepted this route (if any) - find via mapping
+            $stmtCompany = $db->prepare("SELECT r.company_id FROM route_request_mapping rrm INNER JOIN routes r ON rrm.route_id = r.route_id WHERE rrm.request_id = :request_id LIMIT 1");
+            $stmtCompany->bindParam(':request_id', $request_id, PDO::PARAM_INT);
+            $stmtCompany->execute();
+            $companyRow = $stmtCompany->fetch(PDO::FETCH_ASSOC);
+            if ($companyRow && isset($companyRow['company_id'])) {
+                $company_id_n = (int)$companyRow['company_id'];
+                $customerName = $customer && isset($customer['customer_name']) ? $customer['customer_name'] : 'Customer';
+                $msgCompany = "Pickup request {$customerName} has been completed.";
+                Helpers::createNotification($company_id_n, $msgCompany, (int)$request_id, $company_id_n, $customer_id_n);
+            }
             
             echo json_encode([
                 'success' => true,
