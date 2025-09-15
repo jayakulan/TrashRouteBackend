@@ -31,6 +31,13 @@ try {
         }
         $seen = isset($_GET['seen']) ? $_GET['seen'] : null; // '0' | '1' | null
         $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 50;
+        
+        // Clean up notifications older than 3 days before fetching
+        $cleanup_stmt = $db->prepare("
+            DELETE FROM notifications 
+            WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)
+        ");
+        $cleanup_stmt->execute();
 
         $sql = "SELECT n.notification_id,
                        n.user_id,
@@ -46,9 +53,12 @@ try {
                        pr.status AS request_status,
                        pr.otp AS request_otp,
                        pr.timestamp AS request_timestamp,
-                       pr.otp_verified AS request_otp_verified
+                       pr.otp_verified AS request_otp_verified,
+                       ru.name AS customer_name
                 FROM notifications n
                 LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
+                LEFT JOIN customers c ON c.customer_id = n.customer_id
+                LEFT JOIN registered_users ru ON ru.user_id = c.customer_id
                 WHERE n.user_id = :user_id AND n.dismissed_at IS NULL";
         $params = [':user_id' => $user_id];
         if ($seen === '0' || $seen === '1') {
