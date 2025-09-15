@@ -37,7 +37,7 @@ $collection_datetime = $collection_date . ' ' . $collection_time;
 // Email subject and body
 $subject = "Your Trash Collection Request Has Been Accepted!";
 $body = "Dear Customer,<br><br>"
-      . "Your trash collection request has been accepted by <b>$company_name</b>.<br>"
+      . "Your trash collection request has been accepted by company <b>$company_name</b>.<br>"
       . "The collection will take place within 3 days from now on <b>$collection_date</b> at <b>$collection_time</b> (between 4pm and 6pm).<br><br>"
       . "Thank you for using TrashRoute!<br>";
 

@@ -145,28 +145,7 @@ try {
         $stmt->bindParam(':route_id', $route_id);
         $stmt->execute();
         
-        // 7. Create completion notification
-        $company_user_id = null;
-        $stmt = $db->prepare("SELECT user_id FROM registered_users WHERE user_id = :company_id AND role = 'company'");
-        $stmt->bindParam(':company_id', $company_id);
-        $stmt->execute();
-        $company_user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($company_user) {
-            $company_user_id = $company_user['user_id'];
-            $completion_message = "Route #$route_id completed successfully! All pickup requests have been fulfilled.";
-            
-            $stmt = $db->prepare("
-                INSERT INTO notifications (user_id, company_id, message, seen, created_at)
-                VALUES (:user_id, :company_id, :message, 1, NOW())
-            ");
-            $stmt->bindParam(':user_id', $company_user_id);
-            $stmt->bindParam(':company_id', $company_id);
-            $stmt->bindParam(':message', $completion_message);
-            $stmt->execute();
-        }
-        
-        // 8. Update all pickup request statuses to 'Completed'
+        // 7. Update all pickup request statuses to 'Completed'
         $stmt = $db->prepare("
             UPDATE pickup_requests 
             SET status = 'Completed' 
@@ -207,3 +186,4 @@ try {
     ]);
 }
 ?>
+

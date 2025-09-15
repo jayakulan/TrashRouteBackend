@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: http://localhost:5175');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -34,6 +34,80 @@ try {
         'message' => $e->getMessage()
     ]);
     exit();
+}
+
+// Check if this is a delete action
+$action = isset($_GET['action']) ? $_GET['action'] : '';
+
+// Handle DELETE request for pickup request deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
+    try {
+        // Get the request ID from the request
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['requestId'])) {
+            throw new Exception("Request ID is required");
+        }
+        
+        // Extract the numeric ID from the formatted ID (e.g., "#001" -> "1")
+        $formattedId = $input['requestId'];
+        $requestId = intval(str_replace('#', '', $formattedId));
+        
+        if ($requestId <= 0) {
+            throw new Exception("Invalid request ID format");
+        }
+
+        // Create database connection
+        $database = new Database();
+        $pdo = $database->getConnection();
+        
+        if (!$pdo) {
+            throw new Exception("Failed to establish database connection");
+        }
+
+        // Start transaction
+        $pdo->beginTransaction();
+
+        try {
+            // Delete the pickup request
+            $result = Admin::deletePickupRequest($pdo, $requestId);
+            if ($result) {
+                $pdo->commit();
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Pickup request deleted successfully',
+                    'deletedRequestId' => $formattedId
+                ]);
+            } else {
+                $pdo->rollBack();
+                throw new Exception("Failed to delete pickup request or request not found");
+            }
+
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $pdo->rollback();
+            throw $e;
+        }
+
+    } catch (PDOException $e) {
+        // Return error response
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error: ' . $e->getMessage(),
+            'details' => 'PDO Exception occurred'
+        ]);
+        exit();
+    } catch (Exception $e) {
+        // Return error response
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Error: ' . $e->getMessage(),
+            'details' => 'General Exception occurred'
+        ]);
+        exit();
+    }
 }
 
 try {
