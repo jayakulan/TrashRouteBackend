@@ -69,7 +69,7 @@ try {
     $allRequests = $testStmt->fetchAll(PDO::FETCH_ASSOC);
     error_log("trackPickup.php - All requests in table: " . json_encode($allRequests));
 
-    // Get all pickup requests for this customer
+    // Get all pickup requests for this customer with company information
     $query = "SELECT 
                 pr.request_id,
                 pr.waste_type,
@@ -82,9 +82,15 @@ try {
                 pr.otp_verified,
                 ru.name as customer_name,
                 ru.contact_number as customer_phone,
-                ru.address as customer_address
+                ru.address as customer_address,
+                ru_company.name as company_name,
+                ru_company.contact_number as company_phone,
+                ru_company.address as company_address
               FROM pickup_requests pr
               LEFT JOIN registered_users ru ON pr.customer_id = ru.user_id
+              LEFT JOIN notifications n ON pr.request_id = n.request_id AND n.company_id IS NOT NULL
+              LEFT JOIN companies c ON n.company_id = c.company_id
+              LEFT JOIN registered_users ru_company ON c.company_id = ru_company.user_id AND ru_company.role = 'company'
               WHERE pr.customer_id = :customer_id 
               ORDER BY pr.timestamp DESC";
 
@@ -172,7 +178,10 @@ try {
                 'otp' => $request['otp'],
                 'otp_verified' => $request['otp_verified'],
                 'latitude' => $request['latitude'],
-                'longitude' => $request['longitude']
+                'longitude' => $request['longitude'],
+                'company_name' => $request['company_name'],
+                'company_phone' => $request['company_phone'],
+                'company_address' => $request['company_address']
             ];
 
             $waste_type_statuses[$request['waste_type']] = $currentStep;

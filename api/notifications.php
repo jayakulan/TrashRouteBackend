@@ -45,7 +45,8 @@ try {
                        pr.quantity AS request_quantity,
                        pr.status AS request_status,
                        pr.otp AS request_otp,
-                       pr.timestamp AS request_timestamp
+                       pr.timestamp AS request_timestamp,
+                       pr.otp_verified AS request_otp_verified
                 FROM notifications n
                 LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
                 WHERE n.user_id = :user_id AND n.dismissed_at IS NULL";
@@ -112,94 +113,68 @@ try {
             exit;
         }
 
+        if ($action === 'delete') {
+            $user_id = isset($payload['user_id']) ? (int)$payload['user_id'] : 0;
+            $notification_id = isset($payload['notification_id']) ? (int)$payload['notification_id'] : 0;
+
+            if ($user_id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'user_id is required']);
+                exit;
+            }
+
+            if ($notification_id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'notification_id is required']);
+                exit;
+            }
+
+            // Delete the notification
+            $stmt = $db->prepare("DELETE FROM notifications WHERE user_id = :user_id AND notification_id = :notification_id");
+            $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':notification_id', $notification_id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(['success' => true, 'message' => 'Notification deleted successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Notification not found or already deleted']);
+            }
+            exit;
+        }
+
+        if ($action === 'dismiss') {
+            $user_id = isset($payload['user_id']) ? (int)$payload['user_id'] : 0;
+            $notification_id = isset($payload['notification_id']) ? (int)$payload['notification_id'] : 0;
+
+            if ($user_id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'user_id is required']);
+                exit;
+            }
+
+            if ($notification_id <= 0) {
+                echo json_encode(['success' => false, 'message' => 'notification_id is required']);
+                exit;
+            }
+
+            // Dismiss the notification by setting dismissed_at timestamp
+            $stmt = $db->prepare("UPDATE notifications SET dismissed_at = NOW() WHERE user_id = :user_id AND notification_id = :notification_id");
+            $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':notification_id', $notification_id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(['success' => true, 'message' => 'Notification dismissed successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Notification not found or already dismissed']);
+            }
+            exit;
+        }
+
         echo json_encode(['success' => false, 'message' => 'Unsupported action']);
         exit;
     }
 
     echo json_encode(['success' => false, 'message' => 'Unsupported method']);
     exit;
-} catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-}
-?>
-
-<?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-require_once '../config/database.php';
-
-try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-        http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-        exit();
-    }
-
-    $database = new Database();
-    $db = $database->getConnection();
-    if (!$db) {
-        throw new Exception('Database connection failed');
-    }
-
-    // Query params
-    $user_id     = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
-    $seen        = isset($_GET['seen']) ? $_GET['seen'] : null; // '0' | '1' | null
-    $request_id  = isset($_GET['request_id']) ? (int)$_GET['request_id'] : null;
-    $company_id  = isset($_GET['company_id']) ? (int)$_GET['company_id'] : null;
-    $customer_id = isset($_GET['customer_id']) ? (int)$_GET['customer_id'] : null;
-    $limit       = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 50;
-    $offset      = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
-
-    if ($user_id <= 0) {
-        throw new Exception('user_id is required');
-    }
-
-    $conditions = ['user_id = :user_id'];
-    $params = [':user_id' => $user_id];
-
-    if ($seen !== null && ($seen === '0' || $seen === '1')) {
-        $conditions[] = 'seen = :seen';
-        $params[':seen'] = (int)$seen;
-    }
-    if ($request_id) {
-        $conditions[] = 'request_id = :request_id';
-        $params[':request_id'] = $request_id;
-    }
-    if ($company_id) {
-        $conditions[] = 'company_id = :company_id';
-        $params[':company_id'] = $company_id;
-    }
-    if ($customer_id) {
-        $conditions[] = 'customer_id = :customer_id';
-        $params[':customer_id'] = $customer_id;
-    }
-
-    $where = implode(' AND ', $conditions);
-    $sql = "SELECT notification_id, user_id, request_id, company_id, customer_id, message, seen, dismissed_at, created_at
-            FROM notifications
-            WHERE $where AND dismissed_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT :limit OFFSET :offset";
-
-    $stmt = $db->prepare($sql);
-    foreach ($params as $k => $v) {
-        $stmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
-    }
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    echo json_encode(['success' => true, 'data' => $rows]);
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
