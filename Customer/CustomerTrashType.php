@@ -135,10 +135,6 @@ try {
             }
             
             $requestId = $db->lastInsertId();
-
-            // Create a notification for the customer about the scheduled pickup
-            $message = "Pickup scheduled: {$type} (qty: {$quantity}). Request #{$requestId}.";
-            Helpers::createNotification((int)$customerId, $message, (int)$requestId, null, (int)$customerId);
             
             $insertedRequests[] = [
                 'request_id' => $requestId,

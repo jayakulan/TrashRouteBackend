@@ -1,4 +1,10 @@
 <?php
+// Disable all error reporting and output buffering
+error_reporting(0);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ob_start();
+
 session_start();
 
 // CORS headers
@@ -120,4 +126,7 @@ try {
 } catch (Exception $e) {
     Helpers::sendError('Failed to retrieve pickup summary: ' . $e->getMessage(), 500);
 }
+
+// Clean up any output buffer and ensure only JSON is sent
+ob_end_clean();
 ?> 

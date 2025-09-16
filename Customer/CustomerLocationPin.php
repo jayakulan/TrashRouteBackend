@@ -24,8 +24,8 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 
-// Only allow POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Allow both GET and POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit();
@@ -95,6 +95,44 @@ try {
         exit();
     }
     error_log("Customer ID: " . $customerId);
+    
+    // Handle GET request for fetching existing location
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        // Test database connection
+        if (!isset($pdo) || !$pdo) {
+            throw new Exception('Database connection not available. Please check your database configuration.');
+        }
+        
+        // Get the latest existing latitude and longitude for this customer
+        $query = "SELECT latitude, longitude FROM pickup_requests 
+                  WHERE customer_id = :customer_id 
+                  AND latitude IS NOT NULL 
+                  AND longitude IS NOT NULL 
+                  ORDER BY timestamp DESC 
+                  LIMIT 1";
+        
+        $stmt = $pdo->prepare($query);
+        $stmt->bindParam(':customer_id', $customerId);
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'latitude' => $result['latitude'],
+                    'longitude' => $result['longitude']
+                ]
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'No existing location found'
+            ]);
+        }
+        exit();
+    }
     
     // Test database connection
     if (!isset($pdo) || !$pdo) {
