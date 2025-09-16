@@ -15,7 +15,25 @@ require_once '../utils/session_auth_middleware.php';
 require_once '../utils/helpers.php';
 
 // Check company authentication
-SessionAuthMiddleware::requireCompanyAuth();
+try {
+    $authResult = SessionAuthMiddleware::requireCompanyAuth();
+    error_log("Company authentication successful: " . json_encode($authResult));
+} catch (Exception $e) {
+    error_log("Company authentication failed: " . $e->getMessage());
+    http_response_code(401);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Authentication failed',
+        'message' => 'Company authentication required. Please log in as a company user.',
+        'debug' => [
+            'session_exists' => isset($_SESSION['user_id']),
+            'session_role' => $_SESSION['role'] ?? 'not_set',
+            'has_auth_header' => isset($_SERVER['HTTP_AUTHORIZATION']),
+            'referrer' => $_SERVER['HTTP_REFERER'] ?? 'not_set'
+        ]
+    ]);
+    exit;
+}
 
 try {
     // Get POST data

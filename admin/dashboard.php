@@ -124,7 +124,7 @@ try {
         foreach ($recentActivity as &$activity) {
             $timestamp = strtotime($activity['time']);
             $now = time();
-            $diff = $now - $timestamp;
+            $diff = abs($now - $timestamp); // Use abs() to ensure positive value
             
             if ($diff < 3600) {
                 $minutes = round($diff / 60);

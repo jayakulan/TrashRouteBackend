@@ -88,14 +88,21 @@ try {
         ];
     }
 
-    // Create a single confirmation notification for the customer
+    // Create individual notification for each waste type
     $GLOBALS['db'] = $db;
-    $total_waste_types = count($otp_data);
-    $confirmation_message = "Pickup schedule confirmed! OTPs generated for {$total_waste_types} waste type(s). Please keep your OTPs safe and provide them to the pickup company when they arrive.";
+    $notifications_created = 0;
     
-    // Create notification with the first request_id (if any)
-    $first_request_id = !empty($otp_data) ? $otp_data[0]['request_id'] : null;
-    Helpers::createNotification($customer_id, $confirmation_message, $first_request_id, null, $customer_id);
+    foreach ($otp_data as $item) {
+        $confirmation_message = "Pickup scheduled successfully for " . $item['waste_type'] . " (" . $item['quantity'] . "kg). Request #" . $item['request_id'] . ".";
+        
+        $notification_result = Helpers::createNotification($customer_id, $confirmation_message, $item['request_id'], null, $customer_id);
+        if ($notification_result) {
+            $notifications_created++;
+        }
+        error_log("Notification created for " . $item['waste_type'] . ": " . ($notification_result ? 'success' : 'failed'));
+    }
+    
+    error_log("Total notifications created: " . $notifications_created);
 
     // Format the response
     $response_data = [
