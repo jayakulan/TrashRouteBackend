@@ -276,6 +276,16 @@ class CustomerValidator {
     public static function validateEditProfileData($input, $db, $user_id) {
         $errors = [];
         
+        // Map frontend field names to backend field names
+        $mapped_input = [
+            'name' => $input['name'] ?? '',
+            'phone' => $input['phone'] ?? $input['contact_number'] ?? '',
+            'address' => $input['address'] ?? '',
+            'currentPassword' => $input['currentPassword'] ?? '',
+            'newPassword' => $input['newPassword'] ?? '',
+            'confirmPassword' => $input['confirmPassword'] ?? ''
+        ];
+        
         // Define edit profile rules (less strict than registration)
         $edit_rules = [
             'name' => [
@@ -287,11 +297,11 @@ class CustomerValidator {
             'phone' => [
                 'required' => true,
                 'exact_length' => 10,
-                'pattern' => '/^0[27]\d{8}$/'
+                'pattern' => '/^0[27]\d{8}$/'  // Must start with 07 or 02
             ],
             'address' => [
                 'required' => true,
-                'min_length' => 10,
+                'min_length' => 5,  // Reduced minimum length
                 'max_length' => 200
             ],
             'currentPassword' => [
@@ -312,7 +322,7 @@ class CustomerValidator {
         
         // Validate each field
         foreach ($edit_rules as $field => $rules) {
-            $value = $input[$field] ?? '';
+            $value = $mapped_input[$field] ?? '';
             $field_errors = self::validateEditField($field, $value, $rules);
             if (!empty($field_errors)) {
                 $errors[$field] = $field_errors;
@@ -320,24 +330,24 @@ class CustomerValidator {
         }
         
         // Special validation for password change
-        if (!empty($input['newPassword']) || !empty($input['confirmPassword'])) {
-            if (empty($input['currentPassword'])) {
+        if (!empty($mapped_input['newPassword']) || !empty($mapped_input['confirmPassword'])) {
+            if (empty($mapped_input['currentPassword'])) {
                 $errors['currentPassword'] = ['Current password is required to change password'];
             }
-            if (empty($input['newPassword'])) {
+            if (empty($mapped_input['newPassword'])) {
                 $errors['newPassword'] = ['New password is required'];
             }
-            if (empty($input['confirmPassword'])) {
+            if (empty($mapped_input['confirmPassword'])) {
                 $errors['confirmPassword'] = ['Please confirm your new password'];
             }
-            if (!empty($input['newPassword']) && !empty($input['confirmPassword']) && $input['newPassword'] !== $input['confirmPassword']) {
+            if (!empty($mapped_input['newPassword']) && !empty($mapped_input['confirmPassword']) && $mapped_input['newPassword'] !== $mapped_input['confirmPassword']) {
                 $errors['confirmPassword'] = ['Passwords do not match'];
             }
         }
         
         // Validate current password if provided
-        if (!empty($input['currentPassword'])) {
-            $password_valid = self::validateCurrentPassword($db, $user_id, $input['currentPassword']);
+        if (!empty($mapped_input['currentPassword'])) {
+            $password_valid = self::validateCurrentPassword($db, $user_id, $mapped_input['currentPassword']);
             if (!$password_valid) {
                 $errors['currentPassword'] = ['Current password is incorrect'];
             }
@@ -408,13 +418,23 @@ class CustomerValidator {
      * Sanitize edit profile data
      */
     public static function sanitizeEditProfileData($input) {
-        return [
-            'name' => trim($input['name'] ?? ''),
-            'phone' => trim($input['phone'] ?? ''),
-            'address' => trim($input['address'] ?? ''),
+        // Map frontend field names to backend field names
+        $mapped_input = [
+            'name' => $input['name'] ?? '',
+            'phone' => $input['phone'] ?? $input['contact_number'] ?? '',
+            'address' => $input['address'] ?? '',
             'currentPassword' => $input['currentPassword'] ?? '',
             'newPassword' => $input['newPassword'] ?? '',
             'confirmPassword' => $input['confirmPassword'] ?? ''
+        ];
+        
+        return [
+            'name' => trim($mapped_input['name']),
+            'phone' => trim($mapped_input['phone']),
+            'address' => trim($mapped_input['address']),
+            'currentPassword' => $mapped_input['currentPassword'],
+            'newPassword' => $mapped_input['newPassword'],
+            'confirmPassword' => $mapped_input['confirmPassword']
         ];
     }
 }

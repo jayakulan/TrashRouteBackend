@@ -43,7 +43,11 @@ if (!$input) {
     Helpers::sendError('Invalid JSON input');
 }
 
+// Extract user_id from multiple possible field names
 $user_id = isset($input['user_id']) ? intval($input['user_id']) : 0;
+if (!$user_id && isset($input['customer_id'])) {
+    $user_id = intval($input['customer_id']);
+}
 
 if (!$user_id) {
     Helpers::sendError('User ID is required');
@@ -56,10 +60,15 @@ if (!$db) {
 }
 
 try {
+    // Debug: Log the input data
+    error_log("Edit Profile Input: " . json_encode($input));
+    error_log("Extracted user_id: " . $user_id);
+    
     // Validate input data
     $validation_errors = CustomerValidator::validateEditProfileData($input, $db, $user_id);
     
     if (!empty($validation_errors)) {
+        error_log("Validation Errors: " . json_encode($validation_errors));
         http_response_code(400);
         echo json_encode([
             'success' => false,

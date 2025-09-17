@@ -1,12 +1,6 @@
 <?php
 // Notifications API: GET to fetch, POST to mark as seen
 
-// Disable all error reporting and output buffering
-error_reporting(0);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ob_start();
-
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -35,14 +29,15 @@ try {
             echo json_encode(['success' => false, 'message' => 'user_id is required']);
             exit;
         }
-        
-        // Simple test response first
-        if (isset($_GET['test'])) {
-            echo json_encode(['success' => true, 'message' => 'API is working', 'user_id' => $user_id]);
-            exit;
-        }
         $seen = isset($_GET['seen']) ? $_GET['seen'] : null; // '0' | '1' | null
         $limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 50;
+        
+        // Clean up notifications older than 3 days before fetching
+        $cleanup_stmt = $db->prepare("
+            DELETE FROM notifications 
+            WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)
+        ");
+        $cleanup_stmt->execute();
 
         $sql = "SELECT n.notification_id,
                        n.user_id,
@@ -64,51 +59,25 @@ try {
                 LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
                 LEFT JOIN customers c ON c.customer_id = n.customer_id
                 LEFT JOIN registered_users ru ON ru.user_id = c.customer_id
-                WHERE n.user_id = :user_id 
-                AND n.dismissed_at IS NULL";
+                WHERE n.user_id = :user_id AND n.dismissed_at IS NULL";
         $params = [':user_id' => $user_id];
         if ($seen === '0' || $seen === '1') {
             $sql .= " AND seen = :seen";
             $params[':seen'] = (int)$seen;
         }
         $sql .= " ORDER BY created_at DESC, notification_id DESC LIMIT :limit";
-        try {
-            $stmt = $db->prepare($sql);
-            foreach ($params as $key => $val) {
-                if ($key === ':seen') {
-                    $stmt->bindValue($key, $val, PDO::PARAM_INT);
-                } else {
-                    $stmt->bindValue($key, $val, PDO::PARAM_INT);
-                }
+        $stmt = $db->prepare($sql);
+        foreach ($params as $key => $val) {
+            if ($key === ':seen') {
+                $stmt->bindValue($key, $val, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $val, PDO::PARAM_INT);
             }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Filter out company notifications older than 3 days
-            $filteredRows = array_filter($rows, function($row) {
-                try {
-                    // Keep customer notifications (company_id is NULL)
-                    if ($row['company_id'] === null) {
-                        return true;
-                    }
-                    // Keep company notifications only if they're within 3 days
-                    if (empty($row['created_at'])) {
-                        return false;
-                    }
-                    $createdAt = new DateTime($row['created_at']);
-                    $threeDaysAgo = new DateTime('-3 days');
-                    return $createdAt >= $threeDaysAgo;
-                } catch (Exception $e) {
-                    // If date parsing fails, keep the notification
-                    return true;
-                }
-            });
-            
-            echo json_encode(['success' => true, 'data' => array_values($filteredRows)]);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => 'Database query failed: ' . $e->getMessage()]);
         }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'data' => $rows]);
         exit;
     }
 
@@ -219,12 +188,6 @@ try {
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-} catch (Error $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Internal server error']);
 }
-
-// Clean up any output buffer and ensure only JSON is sent
-ob_end_clean();
 ?>
 

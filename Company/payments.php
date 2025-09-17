@@ -214,13 +214,15 @@ try {
             // --- Direct include method (default) ---
             $_POST['customer_email'] = $customer_email;
             $_POST['company_name'] = $company_name;
+            $_POST['request_id'] = $request_id;
             include __DIR__ . '/comemail.php';
 
             // --- OR cURL HTTP POST method (uncomment to use) ---
             /*
             $postData = [
                 'customer_email' => $customer_email,
-                'company_name' => $company_name
+                'company_name' => $company_name,
+                'request_id' => $request_id
             ];
             $ch = curl_init('http://localhost/Trashroutefinal/TrashRouteBackend/Company/comemail.php');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

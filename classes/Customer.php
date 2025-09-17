@@ -33,6 +33,8 @@ class Customer extends User {
     }
 
     public function updateProfile($db, $userId, $name, $email, $phone, $address, $currentPassword = null, $newPassword = null, $confirmPassword = null) {
+        // Debug logging
+        error_log("Customer updateProfile called with: userId=$userId, name=$name, email=$email, phone=$phone, address=$address");
         // First, get user data from registered_users table
         $stmt = $db->prepare("SELECT * FROM registered_users WHERE user_id = ?");
         $stmt->execute([$userId]);
