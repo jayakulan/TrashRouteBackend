@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 23, 2025 at 11:04 AM
+-- Generation Time: Jan 15, 2025 at 10:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `trashroute`
+-- Database: `trashroute_new`
 --
 
 -- --------------------------------------------------------
@@ -40,7 +40,7 @@ CREATE TABLE `admins` (
 --
 
 INSERT INTO `admins` (`admin_id`, `name`, `email`, `password_hash`, `created_at`) VALUES
-(12, 'Jayakulan', 'admin@gmail.com', 'admin', '2025-06-30 10:22:37');
+(1, 'Sarah Johnson', 'admin@trashroute.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '2025-01-15 10:00:00');
 
 -- --------------------------------------------------------
 
@@ -58,19 +58,11 @@ CREATE TABLE `companies` (
 --
 
 INSERT INTO `companies` (`company_id`, `company_reg_number`) VALUES
-(11, 'com/23'),
-(59, 'REG-COMP-002'),
-(61, 'REG-COMP-004'),
-(63, 'REG-COMP-007'),
-(65, 'REG-COMP-009'),
-(73, 'com/23'),
-(74, 'com/23'),
-(76, 'com/45'),
-(77, 'com/23'),
-(78, 'com/21'),
-(79, 'com/45'),
-(83, 'com/23'),
-(91, 'COM25');
+(2, 'ECO-2025-001'),
+(3, 'GREEN-2025-002'),
+(4, 'WASTE-2025-003'),
+(5, 'RECYCLE-2025-004'),
+(6, 'CLEAN-2025-005');
 
 -- --------------------------------------------------------
 
@@ -95,12 +87,9 @@ CREATE TABLE `company_feedback` (
 --
 
 INSERT INTO `company_feedback` (`feedback_id`, `request_id`, `company_id`, `entered_otp`, `pickup_verified`, `pickup_completed`, `rating`, `comment`, `created_at`) VALUES
-(7, 14, 11, '123456', 1, 1, 5, '', '2025-07-21 10:59:11'),
-(8, 16, 11, '098765', 1, 1, 5, '', '2025-08-02 04:37:41'),
-(9, 20, 11, '008684', 1, 1, 5, 'good', '2025-08-19 13:11:16'),
-(10, 15, 11, '123456', 1, 1, 5, 'good', '2025-09-13 14:51:34'),
-(11, 100, 79, '961735', 1, 1, 5, 'good', '2025-09-15 10:40:26'),
-(12, 120, 79, '580201', 1, 1, 5, '', '2025-09-16 10:25:31');
+(1, 1, 2, '123456', 1, 1, 5, 'Excellent service!', '2025-01-15 10:30:00'),
+(2, 2, 3, '789012', 1, 1, 4, 'Good pickup experience', '2025-01-15 11:00:00'),
+(3, 3, 4, '345678', 1, 1, 5, 'Very professional team', '2025-01-15 11:30:00');
 
 -- --------------------------------------------------------
 
@@ -123,8 +112,8 @@ CREATE TABLE `contact_us` (
 --
 
 INSERT INTO `contact_us` (`contact_id`, `admin_id`, `name`, `email`, `subject`, `message`, `created_at`) VALUES
-(1, 12, 'jayakulan', 'customer@gmail.com', 'hi', 'hello', '2025-07-06 05:14:48'),
-(2, 12, 'fbdfgb', 'xfbdgbc@gmail.com', 'xbcgnbcvb', 'xcbcvnvbmvb', '2025-08-02 05:12:48');
+(1, 1, 'Michael Brown', 'michael.brown@email.com', 'Service Inquiry', 'I would like to know more about your waste collection services.', '2025-01-15 09:00:00'),
+(2, 1, 'Emily Davis', 'emily.davis@email.com', 'Partnership Opportunity', 'Our company is interested in partnering with TrashRoute for waste management.', '2025-01-15 09:15:00');
 
 -- --------------------------------------------------------
 
@@ -141,21 +130,16 @@ CREATE TABLE `customers` (
 --
 
 INSERT INTO `customers` (`customer_id`) VALUES
+(7),
+(8),
 (9),
-(19),
-(20),
-(21),
-(23),
-(58),
-(60),
-(62),
-(64),
-(72),
-(80),
-(81),
-(87),
-(89),
-(97);
+(10),
+(11),
+(12),
+(13),
+(14),
+(15),
+(16);
 
 -- --------------------------------------------------------
 
@@ -178,8 +162,9 @@ CREATE TABLE `customer_feedback` (
 --
 
 INSERT INTO `customer_feedback` (`feedback_id`, `request_id`, `customer_id`, `pickup_completed`, `rating`, `comment`, `created_at`) VALUES
-(1, 14, 19, 1, 5, 'good', '2025-08-08 16:37:59'),
-(2, 20, 58, 1, 4, 'nice', '2025-08-19 13:21:45');
+(1, 1, 7, 1, 5, 'Great service, very punctual!', '2025-01-15 10:45:00'),
+(2, 2, 8, 1, 4, 'Good experience overall', '2025-01-15 11:15:00'),
+(3, 3, 9, 1, 5, 'Excellent waste collection service', '2025-01-15 11:45:00');
 
 -- --------------------------------------------------------
 
@@ -204,13 +189,11 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`notification_id`, `user_id`, `request_id`, `company_id`, `customer_id`, `message`, `seen`, `dismissed_at`, `created_at`) VALUES
-(49, 62, 120, NULL, 62, 'Pickup scheduled successfully for Metal (35kg). Request #120.', 0, NULL, '2025-09-16 10:06:03'),
-(51, 20, 15, 79, 20, 'Your pickup request #15 has been accepted by abc.', 0, NULL, '2025-09-16 10:13:17'),
-(52, 62, 120, 79, 62, 'Your pickup request #120 has been accepted by abc.', 0, NULL, '2025-09-16 10:13:17'),
-(53, 79, NULL, 79, NULL, 'Payment successful. Route #67 for metal activated. Customers: 2, Total Qty: 42 kg.', 1, NULL, '2025-09-16 10:13:17'),
-(54, 62, 120, NULL, 62, 'Your pickup request #120 has been marked as completed.', 0, NULL, '2025-09-16 10:25:31'),
-(55, 79, 120, 79, 62, 'Pickup request Dilani Abeykoon has been completed.', 0, NULL, '2025-09-16 10:25:31'),
-(56, 9, 123, NULL, 9, 'Pickup scheduled successfully for Glass (35kg). Request #123.', 0, '2025-09-17 14:21:14', '2025-09-16 10:57:46');
+(1, 7, 1, NULL, 7, 'Pickup scheduled successfully for Plastic (15kg). Request #1.', 0, NULL, '2025-01-15 10:00:00'),
+(2, 8, 2, 2, 8, 'Your pickup request #2 has been accepted by EcoWaste Solutions.', 0, NULL, '2025-01-15 10:15:00'),
+(3, 2, NULL, 2, NULL, 'Payment successful. Route #1 for plastic activated. Customers: 1, Total Qty: 15 kg.', 1, NULL, '2025-01-15 10:15:00'),
+(4, 7, 1, NULL, 7, 'Your pickup request #1 has been marked as completed.', 0, NULL, '2025-01-15 10:30:00'),
+(5, 2, 1, 2, 7, 'Pickup request John Smith has been completed.', 0, NULL, '2025-01-15 10:30:00');
 
 -- --------------------------------------------------------
 
@@ -232,23 +215,11 @@ CREATE TABLE `otp` (
 --
 
 INSERT INTO `otp` (`otp_id`, `user_id`, `otp_code`, `expiration_time`, `is_used`, `created_at`) VALUES
-(6, 72, '511790', '2025-07-22 06:11:54', 1, '2025-07-21 18:11:54'),
-(7, 73, '949535', '2025-07-23 02:17:26', 0, '2025-07-22 14:17:26'),
-(8, 74, '834265', '2025-07-23 02:18:30', 1, '2025-07-22 14:18:30'),
-(9, 75, '714210', '2025-07-23 02:25:03', 0, '2025-07-22 14:25:03'),
-(10, 76, '850493', '2025-07-23 02:25:52', 0, '2025-07-22 14:25:52'),
-(11, 77, '689260', '2025-07-23 02:30:32', 0, '2025-07-22 14:30:32'),
-(12, 78, '870348', '2025-07-23 02:34:23', 0, '2025-07-22 14:34:23'),
-(16, 82, '169837', '2025-07-23 06:58:46', 0, '2025-07-22 18:58:46'),
-(17, 83, '110534', '2025-07-23 07:11:41', 0, '2025-07-22 19:11:41'),
-(18, 84, '193482', '2025-07-23 07:22:02', 0, '2025-07-22 19:22:02'),
-(19, 85, '827293', '2025-07-23 17:06:51', 0, '2025-07-23 05:06:51'),
-(20, 86, '702536', '2025-07-23 17:08:43', 0, '2025-07-23 05:08:43'),
-(21, 87, '007913', '2025-07-23 17:10:55', 1, '2025-07-23 05:10:55'),
-(22, 88, '560496', '2025-07-27 06:38:51', 0, '2025-07-26 18:38:51'),
-(23, 89, '222246', '2025-07-27 07:27:51', 1, '2025-07-26 19:27:51'),
-(25, 91, '242707', '2025-08-02 16:07:22', 1, '2025-08-02 04:07:22'),
-(31, 97, '508653', '2025-09-14 02:05:22', 1, '2025-09-13 14:05:22');
+(1, 7, '123456', '2025-01-15 12:00:00', 1, '2025-01-15 10:00:00'),
+(2, 8, '789012', '2025-01-15 12:15:00', 1, '2025-01-15 10:15:00'),
+(3, 9, '345678', '2025-01-15 12:30:00', 1, '2025-01-15 10:30:00'),
+(4, 10, '901234', '2025-01-15 12:45:00', 0, '2025-01-15 10:45:00'),
+(5, 11, '567890', '2025-01-15 13:00:00', 0, '2025-01-15 11:00:00');
 
 -- --------------------------------------------------------
 
@@ -274,7 +245,9 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`payment_id`, `company_id`, `route_id`, `card_number`, `cardholder_name`, `expiry_date`, `pin_number`, `amount`, `payment_status`, `payment_date`) VALUES
-(60, 79, 67, '1234345655677454', 'jayan', '0000-00-00', '123', 500.00, 'Paid', '2025-09-16 15:43:09');
+(1, 2, 1, '4532123456789012', 'EcoWaste Solutions', '2026-12-31', '1234', 500.00, 'Paid', '2025-01-15 10:15:00'),
+(2, 3, 2, '5555123456789012', 'GreenCollect Ltd', '2027-06-30', '5678', 500.00, 'Paid', '2025-01-15 10:30:00'),
+(3, 4, 3, '4111111111111111', 'WastePro Inc', '2026-03-31', '9012', 500.00, 'Paid', '2025-01-15 10:45:00');
 
 -- --------------------------------------------------------
 
@@ -300,15 +273,14 @@ CREATE TABLE `pickup_requests` (
 --
 
 INSERT INTO `pickup_requests` (`request_id`, `customer_id`, `waste_type`, `quantity`, `latitude`, `longitude`, `status`, `timestamp`, `otp`, `otp_verified`) VALUES
-(14, 19, 'Glass', 3, 6.93447800, 79.84277800, 'Request received', '2025-07-10 19:34:47', '123456', 0),
-(15, 20, 'Metal', 7, 7.29057200, 80.63372800, 'Accepted', '2025-07-10 19:34:47', '123456', 0),
-(16, 21, 'Paper', 10, 6.05351900, 80.22097800, 'Request received', '2025-07-10 19:34:47', '098765', 0),
-(17, 23, 'Plastic', 4, 6.92736900, 79.86138000, 'Request received', '2025-07-10 19:34:47', '654321', 0),
-(20, 58, 'Glass', 2, 8.31135600, 80.40365900, 'Request received', '2025-07-10 19:34:47', '008684', 0),
-(99, 64, 'Paper', 26, 6.98208616, 81.08318678, 'Request received', '2025-09-15 15:15:42', '603471', 0),
-(100, 64, 'Glass', 37, 6.98208616, 81.08318678, 'Request received', '2025-09-15 15:15:42', '961735', 0),
-(120, 62, 'Metal', 35, 6.98500000, 81.07500000, 'Completed', '2025-09-16 15:35:35', '580201', 1),
-(123, 9, 'Glass', 35, 6.98500000, 81.07500000, 'Request received', '2025-09-16 16:27:41', '179724', 0);
+(1, 7, 'Plastic', 15, 6.93447800, 79.84277800, 'Completed', '2025-01-15 10:00:00', '123456', 1),
+(2, 8, 'Paper', 25, 7.29057200, 80.63372800, 'Completed', '2025-01-15 10:15:00', '789012', 1),
+(3, 9, 'Metal', 30, 6.05351900, 80.22097800, 'Completed', '2025-01-15 10:30:00', '345678', 1),
+(4, 10, 'Glass', 20, 6.92736900, 79.86138000, 'Accepted', '2025-01-15 10:45:00', '901234', 0),
+(5, 11, 'Plastic', 18, 8.31135600, 80.40365900, 'Pending', '2025-01-15 11:00:00', '567890', 0),
+(6, 12, 'Paper', 22, 6.98208616, 81.08318678, 'Request received', '2025-01-15 11:15:00', NULL, 0),
+(7, 13, 'Metal', 35, 6.98500000, 81.07500000, 'Request received', '2025-01-15 11:30:00', NULL, 0),
+(8, 14, 'Glass', 28, 6.98500000, 81.07500000, 'Request received', '2025-01-15 11:45:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -333,41 +305,22 @@ CREATE TABLE `registered_users` (
 --
 
 INSERT INTO `registered_users` (`user_id`, `name`, `email`, `password_hash`, `contact_number`, `address`, `role`, `disable_status`, `created_at`) VALUES
-(9, 'John Doe', 'customer@gmail.com', 'customer', '0712345678', '123 Main Street, City', 'customer', 'active', '2025-06-30 09:58:53'),
-(11, 'Test Company', 'company@gmail.com', 'company', '0712345678', '123 Business Street, City', 'company', 'active', '2025-06-30 10:13:42'),
-(12, 'Jayakulan', 'admin@gmail.com', 'admin', '0768304046', 'Jaffna', 'admin', 'active', '2025-06-30 10:22:37'),
-(19, 'Miami', 'miami@gmail.com', '$2y$10$yfisV7tU0rsOvXkF1i87sOhTYO3nmCqwLYfx.84793zBhXhu6g3.C', 'lopsdvsd', 'lopik', 'customer', 'active', '2025-06-30 13:25:36'),
-(20, 'nivethan', 'nivee@gmail.com', '$2y$10$EKI64DhUC9Rl4trxhOtpSuzP5ScZgaGI4.q7GSNjRes9WrjiFPQn6', '123012342134', 'jaffna', 'customer', 'active', '2025-06-30 14:36:31'),
-(21, 'Vsihnnu', 'vishnnu@gmail.com', '$2y$10$2PRvTubzjtXgbu5yJtSoeOq7F56iVQvkFGBu8Mdgo74gsUh3Wx2ke', '23534456', 'sdsdfsfdv', 'customer', 'active', '2025-06-30 17:26:30'),
-(23, 'muralitharan Abi', 'abi@gmail.com', 'abi', '3356856', 'gerhydgjm', 'customer', 'active', '2025-07-01 11:00:04'),
-(58, 'Nimal Perera', 'nimal123@gmail.com', 'hashed_pw1', '0771234567', 'Colombo, Sri Lanka', 'customer', 'active', '2025-07-10 13:54:20'),
-(59, 'Sunil De Silva', 'sunil.ds@example.com', 'hashed_pw2', '0712345678', 'Galle, Sri Lanka', 'company', 'active', '2025-07-10 13:54:20'),
-(60, 'Ayesha Fernando', 'ayesha.f@gmail.com', 'hashed_pw3', '0789876543', 'Kandy, Sri Lanka', 'customer', 'active', '2025-07-10 13:54:20'),
-(61, 'Ruwan Weerasinghe', 'ruwanw@gmail.com', 'hashed_pw4', '0765554422', 'Matara, Sri Lanka', 'company', 'active', '2025-07-10 13:54:20'),
-(62, 'Dilani Abeykoon', 'dilania@gmail.com', 'hashed_pw5', '0777654321', 'Kurunegala, Sri Lanka', 'customer', 'active', '2025-07-10 13:54:20'),
-(63, 'Mahesh Gunasekara', 'mahesh@wastepro.lk', 'hashed_pw6', '0721122334', 'Jaffna, Sri Lanka', 'company', 'active', '2025-07-10 13:54:20'),
-(64, 'Kavindu Perera', 'kavindup@gmail.com', 'hashed_pw7', '0799871234', 'Badulla, Sri Lanka', 'customer', 'active', '2025-07-10 13:54:20'),
-(65, 'Sanduni Rajapaksa', 'sandu.rp@eco.lk', 'hashed_pw8', '0743214567', 'Nuwara Eliya, Sri Lanka', 'company', 'active', '2025-07-10 13:54:20'),
-(72, 'v jayakulan', 'jaya@gmail.com', '$2y$10$q0MWqvuApvF6z4edHKjzDO5kJwb8ogsmOYEShX5l2yUHlkLr/Ci.K', '1234567891', '643 KKS road Jaffna', 'customer', 'active', '2025-07-21 18:11:54'),
-(73, 'global', 'global@gmail.com', '$2y$10$OemhUHcNJSVohOTUwmmTAOKBq90RYIkYZ/x2HWtzwGXiXBFsazbF2', '0768304046', 'jaffna', 'company', 'pending', '2025-07-22 14:17:26'),
-(74, 'ert', 'ert@gmail.com', '$2y$10$2PjSsOSSnhwdWdERdTV6iO98YdOwHq4KSwHdB7kD39opPNK1gm/Za', '1234567890', 'dfdgbfg', 'company', 'active', '2025-07-22 14:18:30'),
-(75, 'v jayakulan', 'jk@gmal.com', '$2y$10$kVcxLdm31TYFr8BuL97i.OO8UewfWta3q8dU7Zsk8x1Je4IDxzX4a', '2353445645', '643 KKS road Jaffna', 'customer', 'pending', '2025-07-22 14:25:03'),
-(76, 'ert', 'eer@gmail.com', '$2y$10$gWB9Q4raxRMC4VhdYRESmON3rdr1wfbMXdg9sLKBs4aZoU/i46YsW', '0776104689', '643 KKS road Jaffna', 'company', 'pending', '2025-07-22 14:25:52'),
-(77, 'abc', 'asd@gmail.com', '$2y$10$I1BpMV.6RzHeQavq6e0.GOi2iyYUoOgIjGvyESTz2/JYcx9qg19OG', '0776104689', '643 KKS road Jaffna', 'company', 'pending', '2025-07-22 14:30:32'),
-(78, 'abc', 'qwer@gmail.com', '$2y$10$TFZdEY6u0k5icGwsZ8CyEeml/j//t4h0pyTQc90VzDgq8HFKLFyn.', '1234567890', '643 KKS road Jaffna', 'company', 'pending', '2025-07-22 14:34:23'),
-(79, 'abc', 'axs@gmail.com', '$2y$10$BdlMVnS/8FTWb2uXfXFdmuobSSdy2AyY.6qRkUqI.g7vVl4q1OUiS', '0776104689', '643 KKS road Jaffna', 'company', 'active', '2025-07-22 17:58:24'),
-(80, 'vjayakulan', 'jk@gmail.com', '$2y$10$YMb2Okb5M8EarMUDsaw4gO5GQF7acV22ZpLmVdfknl49eEO03.mE6', '0776104689', '643 KKS road Jaffna', 'customer', 'active', '2025-07-22 18:37:52'),
-(81, 'v jayakulan', 'as@gmail.com', '$2y$10$5EGbeyNi.00EA5manPpUWOGYt.aj/f5lOyRmDAXOjFyU5lmTbb8LG', '0776104689', '643 KKS road Jaffna', 'customer', 'active', '2025-07-22 18:44:59'),
-(82, 'v jayakulan', 'lok@gmail.com', '$2y$10$JsOOe764kkBK0ZD3N59mu.Kt6WdSk0pBwwBOq9kAk8.bL3T2CDWoK', '0776104689', '643 KKS road Jaffna', 'customer', 'disabled', '2025-07-22 18:58:46'),
-(83, 'abc', 'company12@gmail.com', '$2y$10$8T6/n2lCc5C/ESWi5EG1pOEwpWjXy0OuE3WHskwA0gKANnjN.VEBS', '0776104689', '643 KKS road Jaffna', 'company', 'pending', '2025-07-22 19:11:41'),
-(84, 'v jayakulandxfbcv', 'fgdgfg@gmail.com', '$2y$10$HPTYqm8yRkQedrb3MTG0cO60rqwHK6JfhQm7.Jgw5MAcF5h8poTGK', '0776104689', '643 KKS road Jaffna', 'customer', 'disabled', '2025-07-22 19:22:02'),
-(85, 'kamal', 'kamalq@gmail.com', '$2y$10$P.kB4cDIasuyO0UtZ/OxHOyGUh2TR/IisFqYHXqu83zOMkdpsxHVq', '0768304046', '643 KKS road Jaffna', 'customer', 'pending', '2025-07-23 05:06:51'),
-(86, 'kamal', 'kaqwer@gmail.com', '$2y$10$piTX/sT.hhY5KVImtywPAO6jd8ZH1JqlxEQuufcIvz6pNlaGpespa', '0768304046', '643 KKS road Jaffna', 'customer', 'pending', '2025-07-23 05:08:43'),
-(87, 'v jayakulan', 'qweqerwe@gmail.com', '$2y$10$.qRi8CNWHvgurROBtRwwreQ7ANelS/GEOpZ6bdT9S4i5U0K7nHAG.', '0776104689', '643 KKS road Jaffna', 'customer', 'active', '2025-07-23 05:10:55'),
-(88, 'assdd', 'ad2####@gmail.com', '$2y$10$TQb5KgunfhF216Ef1IfGIOIpXNrATNuhrowTAEpM9gUuTvj0LneLW', '0776104689', '643 KKS road Jaffna', 'customer', 'pending', '2025-07-26 18:38:51'),
-(89, 'Gdfgdf', 'adadfsdf@gmail.com', '$2y$10$lR0g4HxI.2kvwDM.LSEnWO53sQwJfPoDtuJ9pVLmdmBP.Tu4lSmJy', '0776104689', '643 KKS road Jaffna', 'customer', 'disabled', '2025-07-26 19:27:51'),
-(91, 'rathini', 'vrathini1974@gmail.com', '$2y$10$Zph1fD0zS7HTE4DQ9SD8L.PNGKvJmH/0MZ8wHx7kIXOelJGUWengO', '0718619215', 'jaffna srilanka', 'company', 'active', '2025-08-02 04:07:22'),
-(97, 'V Jayakulan', 'cst22109@std.uwu.ac.lk', '$2y$10$kV6EQxvZ8QjRg4yhiG9aIOR5CinAJudrs9Jq5RnW6u7YH91E.IYRq', '0776104689', '643 KKS road Jaffna', 'customer', 'active', '2025-09-13 14:05:22');
+(1, 'Sarah Johnson', 'admin@trashroute.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0712345678', '123 Admin Street, Colombo', 'admin', 'active', '2025-01-15 09:00:00'),
+(2, 'EcoWaste Solutions', 'contact@ecowaste.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0771234567', '456 Business Avenue, Colombo', 'company', 'active', '2025-01-15 09:15:00'),
+(3, 'GreenCollect Ltd', 'info@greencollect.lk', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0712345678', '789 Green Street, Kandy', 'company', 'active', '2025-01-15 09:30:00'),
+(4, 'WastePro Inc', 'admin@wastepro.lk', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0721122334', '321 Waste Lane, Galle', 'company', 'active', '2025-01-15 09:45:00'),
+(5, 'RecycleHub Co', 'contact@recyclehub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0743214567', '654 Recycle Road, Jaffna', 'company', 'active', '2025-01-15 10:00:00'),
+(6, 'CleanEarth Services', 'info@cleanearth.lk', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0765554422', '987 Clean Street, Matara', 'company', 'active', '2025-01-15 10:15:00'),
+(7, 'John Smith', 'john.smith@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0777654321', '123 Main Street, Colombo', 'customer', 'active', '2025-01-15 10:30:00'),
+(8, 'Emily Johnson', 'emily.johnson@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0789876543', '456 Oak Avenue, Kandy', 'customer', 'active', '2025-01-15 10:45:00'),
+(9, 'Michael Brown', 'michael.brown@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0799871234', '789 Pine Road, Galle', 'customer', 'active', '2025-01-15 11:00:00'),
+(10, 'Sarah Davis', 'sarah.davis@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0712345678', '321 Elm Street, Jaffna', 'customer', 'active', '2025-01-15 11:15:00'),
+(11, 'David Wilson', 'david.wilson@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0723456789', '654 Maple Drive, Matara', 'customer', 'active', '2025-01-15 11:30:00'),
+(12, 'Lisa Anderson', 'lisa.anderson@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0734567890', '987 Cedar Lane, Negombo', 'customer', 'active', '2025-01-15 11:45:00'),
+(13, 'Robert Taylor', 'robert.taylor@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0745678901', '147 Birch Court, Anuradhapura', 'customer', 'active', '2025-01-15 12:00:00'),
+(14, 'Jennifer Martinez', 'jennifer.martinez@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0756789012', '258 Spruce Way, Kurunegala', 'customer', 'active', '2025-01-15 12:15:00'),
+(15, 'Christopher Lee', 'christopher.lee@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0767890123', '369 Willow Street, Ratnapura', 'customer', 'active', '2025-01-15 12:30:00'),
+(16, 'Amanda Garcia', 'amanda.garcia@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '0778901234', '741 Poplar Avenue, Badulla', 'customer', 'active', '2025-01-15 12:45:00');
 
 -- --------------------------------------------------------
 
@@ -391,7 +344,11 @@ CREATE TABLE `routes` (
 --
 
 INSERT INTO `routes` (`route_id`, `company_id`, `no_of_customers`, `is_accepted`, `accepted_at`, `is_disabled`, `route_details`, `generated_at`) VALUES
-(67, 79, 2, 1, '2025-09-16 15:43:09', 0, 'Route for metal waste collection - Total Customers: 2, Total Quantity: 42 kg', '2025-09-16 10:13:09');
+(1, 2, 1, 1, '2025-01-15 10:15:00', 0, 'Route for plastic waste collection - Total Customers: 1, Total Quantity: 15 kg', '2025-01-15 10:00:00'),
+(2, 3, 1, 1, '2025-01-15 10:30:00', 0, 'Route for paper waste collection - Total Customers: 1, Total Quantity: 25 kg', '2025-01-15 10:15:00'),
+(3, 4, 1, 1, '2025-01-15 10:45:00', 0, 'Route for metal waste collection - Total Customers: 1, Total Quantity: 30 kg', '2025-01-15 10:30:00'),
+(4, 5, 2, 0, NULL, 0, 'Route for glass waste collection - Total Customers: 2, Total Quantity: 48 kg', '2025-01-15 11:00:00'),
+(5, 6, 3, 0, NULL, 0, 'Route for mixed waste collection - Total Customers: 3, Total Quantity: 75 kg', '2025-01-15 11:30:00');
 
 -- --------------------------------------------------------
 
@@ -411,8 +368,14 @@ CREATE TABLE `route_request_mapping` (
 --
 
 INSERT INTO `route_request_mapping` (`mapping_id`, `route_id`, `request_id`, `created_at`) VALUES
-(139, 67, 15, '2025-09-16 10:13:09'),
-(140, 67, 120, '2025-09-16 10:13:09');
+(1, 1, 1, '2025-01-15 10:00:00'),
+(2, 2, 2, '2025-01-15 10:15:00'),
+(3, 3, 3, '2025-01-15 10:30:00'),
+(4, 4, 4, '2025-01-15 11:00:00'),
+(5, 4, 8, '2025-01-15 11:00:00'),
+(6, 5, 5, '2025-01-15 11:30:00'),
+(7, 5, 6, '2025-01-15 11:30:00'),
+(8, 5, 7, '2025-01-15 11:30:00');
 
 --
 -- Indexes for dumped tables
@@ -523,7 +486,7 @@ ALTER TABLE `route_request_mapping`
 -- AUTO_INCREMENT for table `company_feedback`
 --
 ALTER TABLE `company_feedback`
-  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `contact_us`
@@ -535,49 +498,49 @@ ALTER TABLE `contact_us`
 -- AUTO_INCREMENT for table `customer_feedback`
 --
 ALTER TABLE `customer_feedback`
-  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `otp`
 --
 ALTER TABLE `otp`
-  MODIFY `otp_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `otp_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `pickup_requests`
 --
 ALTER TABLE `pickup_requests`
-  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=124;
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `registered_users`
 --
 ALTER TABLE `registered_users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `routes`
 --
 ALTER TABLE `routes`
-  MODIFY `route_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `route_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `route_request_mapping`
 --
 ALTER TABLE `route_request_mapping`
-  MODIFY `mapping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=141;
+  MODIFY `mapping_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
@@ -666,7 +629,7 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`root`@`localhost` EVENT `auto_update_status` ON SCHEDULE EVERY 1 DAY STARTS '2025-08-30 09:11:34' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE pickup_requests
+CREATE DEFINER=`root`@`localhost` EVENT `auto_update_status` ON SCHEDULE EVERY 1 DAY STARTS '2025-01-15 09:00:00' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE pickup_requests
   SET status = 'request received'
   WHERE status = 'accepted'
     AND created_at < NOW() - INTERVAL 3 DAY$$
@@ -677,3 +640,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
