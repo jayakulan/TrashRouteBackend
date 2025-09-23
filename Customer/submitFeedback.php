@@ -77,7 +77,7 @@ try {
     }
 
     // Check if the request belongs to this customer and is completed
-    $query = "SELECT pr.request_id, pr.status, pr.customer_id 
+    $query = "SELECT pr.request_id, pr.status, pr.customer_id, pr.waste_type 
               FROM pickup_requests pr 
               WHERE pr.request_id = :request_id AND pr.customer_id = :customer_id";
     
@@ -132,6 +132,20 @@ try {
         $insertedFeedback = $verifyStmt->fetch(PDO::FETCH_ASSOC);
         error_log("submitFeedback.php - Verified inserted feedback: " . json_encode($insertedFeedback));
         
+        // Get all waste types that have feedback for this customer using JOIN
+        $wasteTypesQuery = "SELECT DISTINCT pr.waste_type 
+                           FROM customer_feedback cf 
+                           JOIN pickup_requests pr ON cf.request_id = pr.request_id 
+                           WHERE cf.customer_id = :customer_id";
+        
+        $wasteTypesStmt = $db->prepare($wasteTypesQuery);
+        $wasteTypesStmt->bindParam(':customer_id', $customer_id);
+        $wasteTypesStmt->execute();
+        
+        $wasteTypesWithFeedback = $wasteTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        error_log("submitFeedback.php - Waste types with feedback: " . json_encode($wasteTypesWithFeedback));
+
         echo json_encode([
             'success' => true,
             'message' => 'Feedback submitted successfully',
@@ -139,7 +153,9 @@ try {
                 'feedback_id' => $feedback_id,
                 'request_id' => $request_id,
                 'rating' => $rating,
-                'comment' => $comment
+                'comment' => $comment,
+                'waste_type' => $request['waste_type'],
+                'waste_types_with_feedback' => $wasteTypesWithFeedback
             ]
         ]);
     } else {
