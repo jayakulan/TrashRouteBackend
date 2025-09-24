@@ -36,9 +36,9 @@ class Payment {
                 return ['success' => false, 'message' => 'Invalid expiry date format (MM/YY)'];
             }
 
-            // Validate PIN (4 digits)
-            if (!preg_match('/^\d{4}$/', $pin_number)) {
-                return ['success' => false, 'message' => 'Invalid PIN format (4 digits required)'];
+            // Validate CVV (3 digits)
+            if (!preg_match('/^\d{3}$/', $pin_number)) {
+                return ['success' => false, 'message' => 'Invalid CVV format (3 digits required)'];
             }
 
             // Validate amount
@@ -107,11 +107,11 @@ class Payment {
             // Get company name
             $company_name = $this->getCompanyName($company_id);
 
-            // Send notifications and emails
-            $this->sendNotificationsAndEmails($requestIds, $pickupRequests, $company_id, $company_name, $route_id, $waste_type, $totalCustomers, $totalQuantity, $requestIdColumn);
-
-            // Commit transaction
+            // Commit transaction first
             $this->conn->commit();
+
+            // Send notifications and emails after successful transaction
+            $this->sendNotificationsAndEmails($requestIds, $pickupRequests, $company_id, $company_name, $route_id, $waste_type, $totalCustomers, $totalQuantity, $requestIdColumn);
 
             return [
                 'success' => true,
@@ -129,7 +129,10 @@ class Payment {
             ];
 
         } catch (Exception $e) {
-            $this->conn->rollBack();
+            // Only rollback if transaction is still active
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
             return ['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()];
         }
     }
