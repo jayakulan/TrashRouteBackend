@@ -14,6 +14,7 @@ header('Pragma: no-cache');
 
 require_once '../config/database.php';
 require_once '../utils/session_auth_middleware.php';
+require_once '../classes/Route.php';
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -32,11 +33,29 @@ try {
         exit;
     }
 
+    // Initialize Route class
+    $routeClass = new Route();
+
     // Get company_id (and optionally route_id)
     $company_id = $_POST['company_id'] ?? $_GET['company_id'] ?? null;
     $route_id = $_POST['route_id'] ?? $_GET['route_id'] ?? null;
+    $action = $_POST['action'] ?? $_GET['action'] ?? 'get_route';
+    
     if (!$company_id) {
         echo json_encode(['success' => false, 'message' => 'Missing company_id']);
+        exit;
+    }
+
+    // Handle assign route action
+    if ($action === 'assign_route') {
+        $assign_route_id = $_POST['assign_route_id'] ?? $_GET['assign_route_id'] ?? null;
+        if (!$assign_route_id) {
+            echo json_encode(['success' => false, 'message' => 'Missing assign_route_id']);
+            exit;
+        }
+        
+        $result = $routeClass->assignRoute($assign_route_id, $company_id);
+        echo json_encode($result);
         exit;
     }
 
