@@ -362,5 +362,81 @@ class PickupRequest {
             return ['success' => false, 'message' => 'Error getting request: ' . $e->getMessage()];
         }
     }
+
+    /**
+     * Cancel pickup request
+     * @param int $request_id
+     * @param int $customer_id
+     * @return array
+     */
+    public function cancelRequest($request_id, $customer_id) {
+        try {
+            if (!$request_id || !$customer_id) {
+                return ['success' => false, 'message' => 'Request ID and Customer ID are required'];
+            }
+
+            // Check if request exists and belongs to customer
+            $checkQuery = "SELECT * FROM pickup_requests WHERE request_id = :request_id AND customer_id = :customer_id";
+            $checkStmt = $this->conn->prepare($checkQuery);
+            $checkStmt->bindParam(':request_id', $request_id);
+            $checkStmt->bindParam(':customer_id', $customer_id);
+            $checkStmt->execute();
+
+            $request = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$request) {
+                return ['success' => false, 'message' => 'Request not found or does not belong to you'];
+            }
+
+            // Check if request can be cancelled (Request received or Pickup Scheduled status)
+            if ($request['status'] !== 'Request received' && $request['status'] !== 'Pickup Scheduled') {
+                return ['success' => false, 'message' => 'Can only cancel requests with "Request received" or "Pickup Scheduled" status. Current status: ' . $request['status']];
+            }
+
+            // Start transaction
+            $this->conn->beginTransaction();
+
+            // Delete the pickup request
+            $deleteQuery = "DELETE FROM pickup_requests WHERE request_id = :request_id AND customer_id = :customer_id";
+            $deleteStmt = $this->conn->prepare($deleteQuery);
+            $deleteStmt->bindParam(':request_id', $request_id);
+            $deleteStmt->bindParam(':customer_id', $customer_id);
+
+            if (!$deleteStmt->execute()) {
+                $this->conn->rollBack();
+                return ['success' => false, 'message' => 'Failed to cancel request'];
+            }
+
+            // Delete related route mappings if any
+            $deleteMappingQuery = "DELETE FROM route_request_mapping WHERE request_id = :request_id";
+            $deleteMappingStmt = $this->conn->prepare($deleteMappingQuery);
+            $deleteMappingStmt->bindParam(':request_id', $request_id);
+            $deleteMappingStmt->execute(); // Don't fail if no mappings exist
+
+            // Delete related notifications
+            $deleteNotificationQuery = "DELETE FROM notifications WHERE request_id = :request_id";
+            $deleteNotificationStmt = $this->conn->prepare($deleteNotificationQuery);
+            $deleteNotificationStmt->bindParam(':request_id', $request_id);
+            $deleteNotificationStmt->execute(); // Don't fail if no notifications exist
+
+            // Commit transaction
+            $this->conn->commit();
+
+            return [
+                'success' => true,
+                'message' => 'Request cancelled successfully',
+                'data' => [
+                    'request_id' => $request_id,
+                    'waste_type' => $request['waste_type'],
+                    'quantity' => $request['quantity'],
+                    'cancelled_at' => date('Y-m-d H:i:s')
+                ]
+            ];
+
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return ['success' => false, 'message' => 'Error cancelling request: ' . $e->getMessage()];
+        }
+    }
 }
 ?>
