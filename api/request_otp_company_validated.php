@@ -63,6 +63,10 @@ try {
     $validation_result = CompanyValidator::processCompanyRegistration($input, $db);
     
     if (!$validation_result['is_valid']) {
+        // Log validation errors for debugging
+        error_log('Company registration validation failed: ' . json_encode($validation_result['errors']));
+        error_log('Input data: ' . json_encode($input));
+        
         // Return detailed validation errors
         $error_messages = [];
         foreach ($validation_result['errors'] as $field => $errors) {

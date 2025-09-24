@@ -46,11 +46,14 @@ class Payment {
                 return ['success' => false, 'message' => 'Amount must be greater than 0'];
             }
 
+            // Check the actual column name in pickup_requests table (outside transaction)
+            $requestIdColumn = $this->getRequestIdColumn();
+
+            // Ensure route_request_mapping table exists (outside transaction)
+            $this->ensureMappingTableExists($requestIdColumn);
+
             // Start transaction
             $this->conn->beginTransaction();
-
-            // Check the actual column name in pickup_requests table
-            $requestIdColumn = $this->getRequestIdColumn();
 
             // Fetch all pickup requests for the specific waste type
             $pickupRequests = $this->getPickupRequestsByWasteType($waste_type, $requestIdColumn);
@@ -111,7 +114,13 @@ class Payment {
             $this->conn->commit();
 
             // Send notifications and emails after successful transaction
-            $this->sendNotificationsAndEmails($requestIds, $pickupRequests, $company_id, $company_name, $route_id, $waste_type, $totalCustomers, $totalQuantity, $requestIdColumn);
+            // Wrap in try-catch to prevent notification failures from affecting payment success
+            try {
+                $this->sendNotificationsAndEmails($requestIds, $pickupRequests, $company_id, $company_name, $route_id, $waste_type, $totalCustomers, $totalQuantity, $requestIdColumn);
+            } catch (Exception $notificationError) {
+                // Log the notification error but don't fail the payment
+                error_log("Notification/Email error after successful payment: " . $notificationError->getMessage());
+            }
 
             return [
                 'success' => true,
@@ -133,6 +142,9 @@ class Payment {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
+            // Log the error for debugging
+            error_log("Payment processing error: " . $e->getMessage());
+            error_log("Payment processing error trace: " . $e->getTraceAsString());
             return ['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()];
         }
     }
@@ -156,6 +168,25 @@ class Payment {
         }
         
         return $requestIdColumn;
+    }
+
+    /**
+     * Ensure route_request_mapping table exists (called outside transaction)
+     * @param string $requestIdColumn
+     */
+    private function ensureMappingTableExists($requestIdColumn) {
+        $createMappingTable = "
+            CREATE TABLE IF NOT EXISTS route_request_mapping (
+                mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+                route_id INT NOT NULL,
+                request_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (route_id) REFERENCES routes(route_id) ON DELETE CASCADE,
+                FOREIGN KEY (request_id) REFERENCES pickup_requests($requestIdColumn) ON DELETE CASCADE,
+                UNIQUE KEY unique_route_request (route_id, request_id)
+            )
+        ";
+        $this->conn->exec($createMappingTable);
     }
 
     /**
@@ -204,20 +235,6 @@ class Payment {
      * @return bool
      */
     private function createRouteMappings($route_id, $pickupRequests, $requestIdColumn) {
-        // Create route_request_mapping table if it doesn't exist
-        $createMappingTable = "
-            CREATE TABLE IF NOT EXISTS route_request_mapping (
-                mapping_id INT AUTO_INCREMENT PRIMARY KEY,
-                route_id INT NOT NULL,
-                request_id INT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (route_id) REFERENCES routes(route_id) ON DELETE CASCADE,
-                FOREIGN KEY (request_id) REFERENCES pickup_requests($requestIdColumn) ON DELETE CASCADE,
-                UNIQUE KEY unique_route_request (route_id, request_id)
-            )
-        ";
-        $this->conn->exec($createMappingTable);
-
         // Insert mapping entries for all pickup requests
         foreach ($pickupRequests as $request) {
             $insertMapping = "INSERT INTO route_request_mapping (route_id, request_id) VALUES (:route_id, :request_id)";
@@ -329,28 +346,35 @@ class Payment {
      * @param string $requestIdColumn
      */
     private function sendNotificationsAndEmails($requestIds, $pickupRequests, $company_id, $company_name, $route_id, $waste_type, $totalCustomers, $totalQuantity, $requestIdColumn) {
-        // Send emails to customers
-        foreach ($requestIds as $request_id) {
-            $customer_email = $this->getCustomerEmail($request_id, $requestIdColumn);
-            if ($customer_email) {
-                $this->sendCustomerEmail($customer_email, $company_name, $request_id);
+        try {
+            // Send emails to customers
+            foreach ($requestIds as $request_id) {
+                $customer_email = $this->getCustomerEmail($request_id, $requestIdColumn);
+                if ($customer_email) {
+                    $this->sendCustomerEmail($customer_email, $company_name, $request_id);
+                }
             }
-        }
 
-        // Create notifications
-        require_once '../utils/helpers.php';
-        
-        // Per-customer notifications
-        foreach ($pickupRequests as $reqRow) {
-            $customer_id_n = (int)$reqRow['customer_id'];
-            $request_id_n = (int)$reqRow[$requestIdColumn];
-            $msg = "Your pickup request #{$request_id_n} has been accepted by {$company_name}.";
-            Helpers::createNotification($customer_id_n, $msg, $request_id_n, (int)$company_id, $customer_id_n);
-        }
+            // Create notifications
+            require_once '../utils/helpers.php';
+            
+            // Per-customer notifications
+            foreach ($pickupRequests as $reqRow) {
+                $customer_id_n = (int)$reqRow['customer_id'];
+                $request_id_n = (int)$reqRow[$requestIdColumn];
+                $msg = "Your pickup request #{$request_id_n} has been accepted by {$company_name}.";
+                Helpers::createNotification($customer_id_n, $msg, $request_id_n, (int)$company_id, $customer_id_n);
+            }
 
-        // Company notification
-        $companyMsg = "Payment successful. Route #{$route_id} for {$waste_type} activated. Customers: {$totalCustomers}, Total Qty: {$totalQuantity} kg.";
-        Helpers::createNotification((int)$company_id, $companyMsg, null, (int)$company_id, null);
+            // Company notification
+            $companyMsg = "Payment successful. Route #{$route_id} for {$waste_type} activated. Customers: {$totalCustomers}, Total Qty: {$totalQuantity} kg.";
+            Helpers::createNotification((int)$company_id, $companyMsg, null, (int)$company_id, null);
+            
+        } catch (Exception $e) {
+            // Log the error but don't throw it to prevent affecting the main payment process
+            error_log("Error in sendNotificationsAndEmails: " . $e->getMessage());
+            throw $e; // Re-throw to be caught by the calling method
+        }
     }
 
     /**
