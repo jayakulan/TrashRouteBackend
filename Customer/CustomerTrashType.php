@@ -33,9 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Include database configuration and helpers
 try {
-    require_once '../config/database.php';
-    require_once '../utils/helpers.php';
-    require_once '../utils/session_auth_middleware.php';
+require_once '../config/database.php';
+require_once '../utils/helpers.php';
+require_once '../utils/session_auth_middleware.php';
+require_once '../classes/Notification.php';
 } catch (Exception $e) {
     error_log("Error including files: " . $e->getMessage());
     http_response_code(500);
@@ -146,6 +147,13 @@ try {
     
     // Commit transaction
     $db->commit();
+    
+    // Create notifications for each inserted request
+    $notification = new Notification($db);
+    foreach ($insertedRequests as $request) {
+        $message = "Your pickup request #{$request['request_id']} for {$request['waste_type']} ({$request['quantity']} kg) has been received and is being processed.";
+        $notification->create($customerId, $message, $request['request_id'], null, $customerId);
+    }
     
     // Return success response
     echo json_encode([

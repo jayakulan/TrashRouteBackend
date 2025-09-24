@@ -39,7 +39,8 @@ class Notification {
                            pr.otp AS request_otp,
                            pr.timestamp AS request_timestamp,
                            pr.otp_verified AS request_otp_verified,
-                           ru.name AS customer_name
+                           ru.name AS customer_name,
+                           COALESCE(n.request_id, pr.request_id) AS display_request_id
                     FROM notifications n
                     LEFT JOIN pickup_requests pr ON pr.request_id = n.request_id
                     LEFT JOIN customers c ON c.customer_id = n.customer_id
@@ -70,6 +71,9 @@ class Notification {
             $stmt->execute();
 
             $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Debug: Log notification data
+            error_log("Retrieved notifications: " . print_r($notifications, true));
 
             return [
                 'success' => true,

@@ -98,8 +98,11 @@ try {
     
     // Handle GET request for fetching existing location
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        // Test database connection
-        if (!isset($pdo) || !$pdo) {
+        // Get database connection
+        $database = new Database();
+        $pdo = $database->getConnection();
+        
+        if (!$pdo) {
             throw new Exception('Database connection not available. Please check your database configuration.');
         }
         
@@ -134,8 +137,11 @@ try {
         exit();
     }
     
-    // Test database connection
-    if (!isset($pdo) || !$pdo) {
+    // Get database connection for POST requests
+    $database = new Database();
+    $pdo = $database->getConnection();
+    
+    if (!$pdo) {
         throw new Exception('Database connection not available. Please check your database configuration.');
     }
     
