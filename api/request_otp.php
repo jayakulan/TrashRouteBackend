@@ -84,7 +84,7 @@ try {
     $user_id = $db->lastInsertId();
     // Generate and store OTP
     $otp = Helpers::generateOTP(6);
-    $expiration_time = date('Y-m-d H:i:s', strtotime('+10 hours'));
+    $expiration_time = date('Y-m-d H:i:s', time() + 36000); // 10 hours = 36000 seconds
     $stmt = $db->prepare('INSERT INTO otp (user_id, otp_code, expiration_time) VALUES (?, ?, ?)');
     $stmt->execute([$user_id, $otp, $expiration_time]);
     // Send OTP email

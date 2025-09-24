@@ -69,7 +69,15 @@ try {
     if ($action === 'send_otp') {
         // Generate OTP and store with 1 hour expiry
         $otp = rand(100000, 999999);
-        $expiration_time = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        // Use current timestamp + 1 hour for proper expiration calculation
+        $current_time = time();
+        $expiration_time = date('Y-m-d H:i:s', $current_time + 3600); // 3600 seconds = 1 hour
+        
+        // Debug logging
+        error_log("OTP Debug - Current time: " . date('Y-m-d H:i:s', $current_time));
+        error_log("OTP Debug - Expiration time: " . $expiration_time);
+        error_log("OTP Debug - User ID: " . $user_id . ", OTP: " . $otp);
+        
         $stmt = $db->prepare('INSERT INTO otp (user_id, otp_code, expiration_time) VALUES (?, ?, ?)');
         $stmt->execute([$user_id, $otp, $expiration_time]);
         // Send OTP email
@@ -104,6 +112,23 @@ try {
         $stmt = $db->prepare('SELECT * FROM otp WHERE user_id = ? AND otp_code = ? AND is_used = 0 AND expiration_time > NOW()');
         $stmt->execute([$user_id, $otp_code]);
         $otpRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Debug logging for OTP verification
+        error_log("OTP Verification Debug - User ID: " . $user_id . ", OTP Code: " . $otp_code);
+        if ($otpRow) {
+            error_log("OTP Verification Debug - Found OTP with expiration: " . $otpRow['expiration_time']);
+        } else {
+            // Check if OTP exists but is expired
+            $stmt_check = $db->prepare('SELECT * FROM otp WHERE user_id = ? AND otp_code = ? AND is_used = 0');
+            $stmt_check->execute([$user_id, $otp_code]);
+            $expiredOtp = $stmt_check->fetch(PDO::FETCH_ASSOC);
+            if ($expiredOtp) {
+                error_log("OTP Verification Debug - OTP exists but expired. Expiration: " . $expiredOtp['expiration_time'] . ", Current DB time: " . date('Y-m-d H:i:s'));
+            } else {
+                error_log("OTP Verification Debug - No OTP found for user_id: " . $user_id . ", otp_code: " . $otp_code);
+            }
+        }
+        
         if (!$otpRow) {
             Helpers::sendError('Invalid or expired OTP');
         }

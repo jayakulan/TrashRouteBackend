@@ -17,6 +17,8 @@ class Database {
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            // Set timezone to UTC for consistency
+            $this->conn->exec("SET time_zone = '+00:00'");
         } catch(PDOException $exception) {
             error_log("Database connection error: " . $exception->getMessage());
             // Don't echo here to avoid HTML output in API responses
